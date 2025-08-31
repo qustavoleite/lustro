@@ -1,0 +1,31 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-blue-700: #4C75D2;
+  --color-off-white: #F8F8F8;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --font-heading: 'Space Grotesk', sans-serif;
+    --font-sans: 'DM Sans', sans-serif;
+  }
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
