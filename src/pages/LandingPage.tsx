@@ -30,10 +30,10 @@ export function LandingPage() {
 
           <div className='flex items-center gap-3'>
             <Link to='/login'>
-              <Button variant='secondary'>Login</Button>
+              <Button variant='outline'>Login</Button>
             </Link>
             <Link to='/singup'>
-              <Button variant='primary'>Cadastrar-se</Button>
+              <Button variant='default'>Cadastrar-se</Button>
             </Link>
           </div>
         </div>
@@ -53,11 +53,11 @@ export function LandingPage() {
               </p>
               <div className='flex flex-row gap-4'>
                 <Link to='/login'>
-                  <Button variant='primary'>Agendar Agora</Button>
+                  <Button variant='default'>Agendar Agora</Button>
                 </Link>
 
                 <Button
-                  variant='secondary'
+                  variant='outline'
                   onClick={() => {
                     const section = document.getElementById('sobre')
                     section?.scrollIntoView({ behavior: 'smooth' })
@@ -111,7 +111,7 @@ export function LandingPage() {
       </section>
 
       <section id='servicos' className='py-20 px-4'>
-        <div className='container mx-auto max-w-6x'>
+        <div className='container mx-auto max-w-6xl'>
           <div className='text-left md:text-center mb-16'>
             <h2 className='font-heading font-bold text-3xl md:text-4xl text-primary mb-4'>
               Nossos Serviços
@@ -126,7 +126,7 @@ export function LandingPage() {
 
           <div className='grid md:grid-cols-3 gap-8'>
             <div className='border-border hover:shadow-lg transition-shadow bg-off-white border border-gray-300 rounded-lg'>
-              <div className='p-12 text-center'>
+              <div className='p-8 text-center'>
                 <div className='w-16 h-16 bg-[#E7EBF4] rounded-full flex items-center justify-center mx-auto mb-6'>
                   <Car className='w-8 h-8 text-blue-700' />
                 </div>
@@ -137,7 +137,7 @@ export function LandingPage() {
               </div>
             </div>
 
-            <div className='border-border hover:shadow-lg transition-shadow  bg-off-white border border-gray-300 rounded-lg'>
+            <div className='border-border hover:shadow-lg transition-shadow bg-off-white border border-gray-300 rounded-lg'>
               <div className='p-8 text-center'>
                 <div className='w-16 h-16 bg-[#E7EBF4] rounded-full flex items-center justify-center mx-auto mb-6'>
                   <Sparkles className='w-8 h-8 text-blue-700' />
