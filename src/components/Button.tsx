@@ -27,11 +27,9 @@ export const Button = ({
 }: ButtonProps) => {
   const Comp = asChild ? 'span' : 'button'
 
-  // Base classes comuns
   const baseClasses =
     'inline-flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 cursor-pointer'
 
-  // Variantes de estilo
   const variantClasses: Record<ButtonVariant, string> = {
     default: 'bg-blue-700 text-white shadow hover:scale-102',
     secondary: 'border border-gray-300 text-black hover:bg-blue-700 hover:text-white',
@@ -44,7 +42,6 @@ export const Button = ({
     link: 'text-blue-700 underline scale-102 hover:no-underline',
   }
 
-  // Tamanhos
   const sizeClasses: Record<ButtonSize, string> = {
     default: 'h-10 px-5 py-3',
     outline: 'h-10 px-5 py-3',
