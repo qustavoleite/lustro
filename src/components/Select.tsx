@@ -1,172 +1,101 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { ChevronDownIcon, CheckIcon } from 'lucide-react'
 
-interface SelectProps {
+type SelectProps = {
   value?: string
   onChange?: (value: string) => void
+  onValueChange?: (value: string) => void
   placeholder?: string
   children: React.ReactNode
-  size?: 'sm' | 'default'
 }
 
-interface SelectItemProps {
+type SelectItemProps = {
   value: string
   children: React.ReactNode
-  disabled?: boolean
-}
-
-interface SelectInternalItemProps extends SelectItemProps {
-  onSelect?: (val: string) => void
-  selected?: string
-}
-
-interface SelectTriggerProps {
-  children: React.ReactNode
-  isOpen: boolean
-  onClick?: () => void
-  size?: 'sm' | 'default'
 }
 
 export function Select({
   value,
   onChange,
+  onValueChange,
   placeholder,
   children,
-  size = 'default',
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [selected, setSelected] = useState(value || '')
-  const triggerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const handleToggle = () => setIsOpen(!isOpen)
-
-  const handleSelect = (val: string) => {
-    setSelected(val)
-    onChange?.(val)
-    setIsOpen(false)
-  }
-
-  const handleClickOutside = (e: MouseEvent) => {
-    if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
-      setIsOpen(false)
-    }
-  }
+  const handleToggle = () => setIsOpen((prev) => !prev)
+  const handleClose = () => setIsOpen(false)
 
   useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        handleClose()
+      }
+    }
+    // Use 'click' so item onClick fires before this handler
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
-  return (
-    <div className='relative inline-block w-fit'>
-      {/* Trigger */}
-      <SelectTrigger
-        ref={triggerRef}
-        isOpen={isOpen}
-        onClick={handleToggle}
-        size={size}
-      >
-        <SelectValue value={selected} placeholder={placeholder} />
-      </SelectTrigger>
+  const display = React.Children.toArray(children).find((child) => {
+    if (!React.isValidElement<SelectItemProps>(child)) return false
+    return child.props.value === value
+  }) as React.ReactElement<SelectItemProps> | undefined
 
-      {/* Content */}
+  const handleSelect = (val: string) => {
+    onChange?.(val)
+    onValueChange?.(val)
+    handleClose()
+  }
+
+  return (
+    <div ref={containerRef} className='relative w-full'>
+      <button
+        type='button'
+        onClick={handleToggle}
+        className='flex w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm'
+      >
+        <span className='line-clamp-1'>
+          {display ? display.props.children : placeholder || 'Selecionar...'}
+        </span>
+        <ChevronDownIcon
+          className={`w-4 h-4 transition-transform ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
       {isOpen && (
-        <SelectContent>
-          {React.Children.map(children, (child) => {
-            if (React.isValidElement<Partial<SelectInternalItemProps>>(child)) {
-              return React.cloneElement(child, {
-                onSelect: handleSelect,
-                selected,
-              })
-            }
-            return child
-          })}
-        </SelectContent>
+        <div className='absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border bg-white shadow-md'>
+          <div className='p-1'>
+            {React.Children.map(children, (child) => {
+              if (!React.isValidElement<SelectItemProps>(child)) return child
+              const isSelected = child.props.value === value
+              return (
+                <div
+                  key={child.props.value}
+                  onClick={() => handleSelect(child.props.value)}
+                  className={`flex items-center justify-between gap-2 px-2 py-1.5 cursor-pointer text-sm ${
+                    isSelected
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <span>{child.props.children}</span>
+                  {isSelected && <CheckIcon className='w-4 h-4' />}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
     </div>
   )
 }
 
-// Trigger separado
-export const SelectTrigger = React.forwardRef<
-  HTMLDivElement,
-  SelectTriggerProps & React.HTMLAttributes<HTMLDivElement>
->(({ children, isOpen, size = 'default', ...props }, ref) => {
-  const heightClass = size === 'sm' ? 'h-8' : 'h-9'
-  return (
-    <div
-      ref={ref}
-      className={`flex items-center justify-between gap-2 rounded-md  border-gray-300 px-3 py-2 text-sm cursor-pointer bg-white shadow-sm ${heightClass}`}
-      {...props}
-    >
-      {children}
-      <ChevronDownIcon
-        className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-      />
-    </div>
-  )
-})
-
-export function SelectContent({ children }: { children: React.ReactNode }) {
-  return (
-    <div className='absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border bg-white shadow-md'>
-      {/* Scroll Up */}
-      <div className='flex items-center justify-center py-1'>
-        <ChevronUpIcon className='w-4 h-4' />
-      </div>
-
-      <div className='p-1'>{children}</div>
-
-      {/* Scroll Down */}
-      <div className='flex items-center justify-center py-1'>
-        <ChevronDownIcon className='w-4 h-4' />
-      </div>
-    </div>
-  )
-}
-
-export function SelectValue({
-  value,
-  placeholder,
-}: {
-  value?: string
-  placeholder?: string
-}) {
-  return (
-    <span className='line-clamp-1 flex items-center gap-2'>
-      {value || placeholder || 'Select...'}
-    </span>
-  )
-}
-
-export function SelectItem({
-  value,
-  children,
-  disabled,
-  onSelect,
-  selected,
-}: SelectInternalItemProps) {
-  const handleClick = () => {
-    if (!disabled) onSelect?.(value)
-  }
-
-  return (
-    <div
-      onClick={handleClick}
-      className={`flex items-center justify-between gap-2 px-2 py-1.5 cursor-pointer text-sm ${
-        selected === value ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-    >
-      <span>{children}</span>
-      {selected === value && <CheckIcon className='w-4 h-4' />}
-    </div>
-  )
-}
-
-export function SelectLabel({ children }: { children: React.ReactNode }) {
-  return <div className='px-2 py-1 text-xs text-gray-500'>{children}</div>
-}
-
-export function SelectSeparator() {
-  return <div className='my-1 h-px bg-gray-200 mx-1' />
+export function SelectItem({ value, children }: SelectItemProps) {
+  return <div data-value={value}>{children}</div>
 }
