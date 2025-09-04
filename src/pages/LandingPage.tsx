@@ -81,7 +81,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id='sobre' className='py-20 px-4 bg-muted/30'>
+      <section id='sobre' className='py-20 px-4'>
         <div className='container mx-auto max-w-6xl'>
           <div className='grid md:grid-cols-2 gap-12 items-center'>
             <div className='relative'>
@@ -100,7 +100,7 @@ export function LandingPage() {
                 Unimos praticidade e qualidade para oferecer lavagens rápidas e
                 eficientes, pensadas para o seu dia a dia.
               </p>
-              <p className='text-lg  leading-relaxed'>
+              <p className='text-lg leading-relaxed'>
                 Nossa missão é proporcionar a melhor experiência em cuidados
                 automotivos, com profissionais qualificados e produtos de alta
                 qualidade, garantindo que seu carro sempre esteja impecável.
