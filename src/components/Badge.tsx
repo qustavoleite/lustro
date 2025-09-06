@@ -7,7 +7,7 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'border-transparent bg-blue-600 text-white hover:bg-blue-700',
+  default: 'border-transparent bg-blue-700 text-white hover:bg-blue-700',
   secondary: 'border-transparent bg-gray-200 text-gray-800 hover:bg-gray-300',
   destructive: 'border-transparent bg-red-600 text-white hover:bg-red-700',
   outline: 'border border-gray-400 text-gray-800 hover:bg-gray-100',
@@ -16,7 +16,7 @@ const variantClasses: Record<BadgeVariant, string> = {
 function Badge({ className = '', variant = 'default', ...props }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-md px-2 py-0.5 
+      className={`inline-flex items-center justify-center rounded-md px-3 py-2 
         text-xs font-medium w-fit whitespace-nowrap shrink-0 gap-1 
         transition-colors overflow-hidden ${variantClasses[variant]} ${className}`}
       {...props}
