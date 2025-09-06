@@ -4,7 +4,6 @@ import { Input } from '../components/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card'
 import { Label } from '../components/Label'
 import { Select, SelectItem } from '../components/Select'
-
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup'
 import { Link } from 'react-router-dom'
 import { Calendar, Car, Sparkles, Shield, User, LogOut } from 'lucide-react'
@@ -16,6 +15,7 @@ export function Schedule() {
   const [carModel, setCarModel] = useState('')
   const [plate, setPlate] = useState('')
   const [phone, setPhone] = useState('')
+  const [carOwner, setCarOwner] = useState('')
   const [showSummary, setShowSummary] = useState(false)
 
   const prices = {
@@ -58,6 +58,7 @@ export function Schedule() {
       selectedTime &&
       washType &&
       carModel &&
+      carOwner &&
       plate &&
       phone
     ) {
@@ -66,16 +67,39 @@ export function Schedule() {
   }
 
   const handleFinalizeBooking = () => {
-    // Aqui seria feita a integração com o backend
+    const newBooking = {
+      id: Date.now(),
+      date: selectedDate,
+      time: selectedTime,
+      washType: washType,
+      carModel: carModel,
+      carOwner: carOwner,
+      plate: plate,
+      phone: phone,
+      price: calculatePrice(),
+      status: 'agendado',
+    }
+
+    const existingBookings = JSON.parse(
+      localStorage.getItem('bookings') || '[]'
+    )
+
+    const updatedBookings = [...existingBookings, newBooking]
+
+    localStorage.setItem('bookings', JSON.stringify(updatedBookings))
+
     alert('Agendamento realizado com sucesso!')
-    // Reset form
+
     setSelectedDate('')
     setSelectedTime('')
     setWashType('')
     setCarModel('')
+    setCarOwner('')
     setPlate('')
     setPhone('')
     setShowSummary(false)
+
+    window.location.href = '/scheduling'
   }
 
   const formatDateForDisplay = (dateString: string) => {
@@ -101,17 +125,25 @@ export function Schedule() {
     )}`
   }
 
+  const isFormComplete =
+    !!selectedDate &&
+    !!selectedTime &&
+    !!washType &&
+    !!carModel &&
+    !!carOwner &&
+    !!plate &&
+    !!phone
+
   if (showSummary) {
     return (
       <div className='min-h-screen bg-background'>
-        {/* Header // ver isso aqui depoisssss*/}
-        <header className='border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
+        <header className='border-b border-gray-300'>
           <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
             <div className='font-heading font-bold text-2xl text-primary'>
               Lustro
             </div>
             <div className='flex items-center gap-4'>
-              <Link to='/dashboard/agendamentos'>
+              <Link to='/scheduling'>
                 <Button variant='secondary' size='sm'>
                   <User className='w-4 h-4 mr-2' />
                   Meus Agendamentos
@@ -130,56 +162,52 @@ export function Schedule() {
         <div className='container mx-auto max-w-2xl px-4 py-12'>
           <Card>
             <CardHeader className='text-center'>
-              <CardTitle className='font-heading text-2xl text-primary'>
+              <CardTitle className='font-heading text-xl mb-7'>
                 Resumo do Agendamento
               </CardTitle>
             </CardHeader>
             <CardContent className='space-y-6'>
-              <div className='grid grid-cols-2 gap-4'>
+              <div className='grid grid-cols-2 gap-5'>
                 <div>
-                  <Label className='text-sm font-medium text-muted-foreground'>
-                    Data
-                  </Label>
-                  <p className='text-lg font-semibold'>
+                  <Label className='font-bold'>Data</Label>
+                  <p className='text-lg'>
                     {formatDateForDisplay(selectedDate)}
                   </p>
                 </div>
                 <div>
-                  <Label className='text-sm font-medium text-muted-foreground'>
-                    Horário
-                  </Label>
-                  <p className='text-lg font-semibold'>{selectedTime}</p>
+                  <Label className='font-bold text-lg'>Horário</Label>
+                  <p className='font-medium'>{selectedTime}</p>
                 </div>
                 <div>
-                  <Label className='text-sm font-medium text-muted-foreground'>
-                    Tipo de Lavagem
-                  </Label>
-                  <p className='text-lg font-semibold capitalize'>{washType}</p>
+                  <Label className='font-bold text-lg'>Tipo de Lavagem</Label>
+                  <p className='font-medium capitalize'>
+                    {washType}
+                  </p>
                 </div>
                 <div>
-                  <Label className='text-sm font-medium text-muted-foreground'>
-                    Modelo do Carro
-                  </Label>
-                  <p className='text-lg font-semibold capitalize'>{carModel}</p>
+                  <Label className='font-bold text-lg'>Modelo do Carro</Label>
+                  <p className='font-medium capitalize'>
+                    {carModel}
+                  </p>
                 </div>
                 <div>
-                  <Label className='text-sm font-medium text-muted-foreground'>
-                    Placa
-                  </Label>
-                  <p className='text-lg font-semibold'>{plate}</p>
+                  <Label className='font-bold text-lg'>Proprietário</Label>
+                  <p className='font-medium'>{carOwner}</p>
                 </div>
                 <div>
-                  <Label className='text-sm font-medium text-muted-foreground'>
-                    Telefone
-                  </Label>
-                  <p className='text-lg font-semibold'>{phone}</p>
+                  <Label className='font-bold text-lg'>Placa</Label>
+                  <p className='font-medium'>{plate}</p>
+                </div>
+                <div>
+                  <Label className='font-bold text-lg'>Telefone</Label>
+                  <p className='font-medium'>{phone}</p>
                 </div>
               </div>
 
-              <div className='border-t pt-4'>
+              <div className='border-t border-gray-300 pt-4'>
                 <div className='flex justify-between items-center'>
-                  <Label className='text-lg font-medium'>Valor Total</Label>
-                  <p className='text-2xl font-bold text-accent'>
+                  <Label className='text-xl font-medium'>Valor Total</Label>
+                  <p className='text-2xl font-bold text-blue-700'>
                     R$ {calculatePrice()},00
                   </p>
                 </div>
@@ -194,7 +222,7 @@ export function Schedule() {
                   Voltar
                 </Button>
                 <Button
-                  className='flex-1 bg-accent hover:bg-accent/90'
+                  className='flex-1 bg-blue-700 hover:bg-accent/90'
                   onClick={handleFinalizeBooking}
                 >
                   Confirmar Agendamento
@@ -216,7 +244,7 @@ export function Schedule() {
             Lustro
           </div>
           <div className='flex items-center gap-4'>
-            <Link to='/dashboard/agendamentos'>
+            <Link to='/scheduling'>
               <Button variant='secondary' size='sm'>
                 <User className='w-4 h-4 mr-2' />
                 Meus Agendamentos
@@ -237,15 +265,13 @@ export function Schedule() {
           <h1 className='font-heading font-bold text-3xl md:text-4xl text-primary mb-4'>
             Agendar Lavagem
           </h1>
-          <p className='text-lg text-muted-foreground'>
+          <p className='text-lg'>
             Escolha o melhor horário e serviço para seu veículo
           </p>
         </div>
 
         <div className='grid lg:grid-cols-2 gap-8'>
-          {/* Formulário de Agendamento */}
           <div className='space-y-6'>
-            {/* Seleção de Data e Horário */}
             <Card>
               <CardHeader>
                 <CardTitle className='flex items-center gap-2'>
@@ -266,7 +292,7 @@ export function Schedule() {
                       setSelectedDate(e.target.value)
                       setSelectedTime('')
                     }}
-                    min={new Date().toISOString().split('T')[0]} 
+                    min={new Date().toISOString().split('T')[0]}
                     className='w-full'
                   />
                 </div>
@@ -290,7 +316,7 @@ export function Schedule() {
                             className={`
                               ${
                                 selectedTime === time
-                                  ? 'bg-accent hover:bg-accent/90'
+                                  ? 'bg-blue-700 hover:bg-accent/90'
                                   : ''
                               }
                               ${
@@ -306,7 +332,7 @@ export function Schedule() {
                       })}
                     </div>
                     {getUnavailableTimes(selectedDate).length > 0 && (
-                      <p className='text-xs text-muted-foreground mt-2'>
+                      <p className='text-xs mt-2'>
                         Horários em cinza não estão disponíveis
                       </p>
                     )}
@@ -315,7 +341,6 @@ export function Schedule() {
               </CardContent>
             </Card>
 
-            {/* Tipo de Lavagem */}
             <Card>
               <CardHeader>
                 <CardTitle>Tipo de Lavagem</CardTitle>
@@ -334,17 +359,15 @@ export function Schedule() {
                       htmlFor='interna'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      <Sparkles className='w-4 h-4 text-blue-700' />
+                      {/* <Sparkles className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Interna</p>
-                          <span className='text-lg font-bold text-blue-700'>
+                          <span className='text-base font-bold text-blue-700'>
                             R$ 50
                           </span>
                         </div>
-                        <p className='text-sm text-muted-foreground'>
-                          Interior limpo e higienizado
-                        </p>
+                        <p className=''>Interior limpo e higienizado</p>
                       </div>
                     </Label>
                   </div>
@@ -361,17 +384,15 @@ export function Schedule() {
                       htmlFor='externa'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      <Car className='w-4 h-4 text-blue-700' />
+                      {/* <Car className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Externa</p>
-                          <span className='text-lg font-bold text-blue-700'>
+                          <span className='text-base font-bold text-blue-700'>
                             R$ 40
                           </span>
                         </div>
-                        <p className='text-sm text-muted-foreground'>
-                          Remova a sujeira e recupere o brilho
-                        </p>
+                        <p className=''>Remova a sujeira e recupere o brilho</p>
                       </div>
                     </Label>
                   </div>
@@ -388,17 +409,15 @@ export function Schedule() {
                       htmlFor='completa'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      <Shield className='w-4 h-4 text-blue-700' />
+                      {/* <Shield className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Completa</p>
-                          <span className='text-lg font-bold text-blue-700'>
+                          <span className='text-base font-bold text-blue-700'>
                             R$ 80
                           </span>
                         </div>
-                        <p className='text-sm text-muted-foreground'>
-                          Cuidado total por dentro e por fora
-                        </p>
+                        <p className=''>Cuidado total por dentro e por fora</p>
                       </div>
                     </Label>
                   </div>
@@ -407,13 +426,23 @@ export function Schedule() {
             </Card>
           </div>
 
-          {/* Informações do Veículo */}
           <div className='space-y-6'>
             <Card>
               <CardHeader>
                 <CardTitle>Dados do Veículo</CardTitle>
               </CardHeader>
               <CardContent className='space-y-4'>
+                <div>
+                  <Label htmlFor='carOwner' className='mb-2'>
+                    Proprietário do Carro
+                  </Label>
+                  <Input
+                    id='carOwner'
+                    placeholder='Nome do proprietário'
+                    value={carOwner}
+                    onChange={(e) => setCarOwner(e.target.value)}
+                  />
+                </div>
                 <div>
                   <Label htmlFor='plate' className='mb-2'>
                     Placa do Carro
@@ -439,7 +468,6 @@ export function Schedule() {
               </CardContent>
             </Card>
 
-            {/* Modelo do Carro */}
             <Card>
               <CardHeader>
                 <CardTitle>Modelo do Carro</CardTitle>
@@ -471,16 +499,9 @@ export function Schedule() {
 
         <div className='flex justify-center mt-8'>
           <Button
-            className='bg-accent hover:bg-accent/90 text-lg py-6 px-12'
+            className='bg-blue-700 hover:bg-accent/90 text-lg py-6 px-12'
             onClick={handleConfirmBooking}
-            disabled={
-              !selectedDate ||
-              !selectedTime ||
-              !washType ||
-              !carModel ||
-              !plate ||
-              !phone
-            }
+            disabled={!isFormComplete}
           >
             Revisar Agendamento
           </Button>
