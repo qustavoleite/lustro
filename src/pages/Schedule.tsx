@@ -247,7 +247,7 @@ export function Schedule() {
             <Link to='/scheduling'>
               <Button variant='secondary' size='sm'>
                 <User className='w-4 h-4 mr-2' />
-                Meus Agendamentos
+                Minha agenda
               </Button>
             </Link>
             <Link to='/'>

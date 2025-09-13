@@ -166,7 +166,7 @@ export function Scheduling() {
             <Link to='/schedule'>
               <Button variant='outline' size='sm'>
                 <ArrowLeft className='w-4 h-4 mr-2' />
-                Novo Agendamento
+                Agendar
               </Button>
             </Link>
             <Link to='/'>
@@ -215,7 +215,7 @@ export function Scheduling() {
                   <CardTitle className='text-lg'>
                     Agendamento #{booking.id}
                   </CardTitle>
-                  <div className='flex items-center gap-2 '>
+                  <div className='flex flex-col md:flex-row gap-4'>
                     {getStatusBadge(booking.status)}
                     {booking.status === 'agendado' && (
                       <Button
