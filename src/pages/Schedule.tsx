@@ -6,7 +6,7 @@ import { Label } from '../components/Label'
 import { Select, SelectItem } from '../components/Select'
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup'
 import { Link } from 'react-router-dom'
-import { Calendar, Car, Sparkles, Shield, User, LogOut } from 'lucide-react'
+import { Calendar, User, LogOut } from 'lucide-react'
 
 export function Schedule() {
   const [selectedDate, setSelectedDate] = useState('')
