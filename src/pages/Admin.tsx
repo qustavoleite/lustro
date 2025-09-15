@@ -4,11 +4,26 @@ import { Calendar, Clock, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
-export function Admin() {
-  const [selectedAgendamento, setSelectedAgendamento] = useState<any>(null)
-  const [showModal, setShowModal] = useState(false)
+interface Agendamento {
+  id: number
+  cliente: string
+  data: string
+  horario: string
+  servico: string
+  valor: number
+  status: string
+  placa: string
+  telefone: string
+  modelo: string
+}
 
-  const agendamentosRecentes = [
+export function Admin() {
+  const [selectedAgendamento, setSelectedAgendamento] =
+    useState<Agendamento | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [agendamentosRecentes, setAgendamentosRecentes] = useState<
+    Agendamento[]
+  >([
     {
       id: 1,
       cliente: 'João Silva',
@@ -45,16 +60,26 @@ export function Admin() {
       telefone: '(11) 77777-7777',
       modelo: 'SUV',
     },
-  ]
+  ])
 
-  const handleVerDetalhes = (agendamento: any) => {
+  const handleVerDetalhes = (agendamento: Agendamento) => {
     setSelectedAgendamento(agendamento)
     setShowModal(true)
   }
 
+  const handleCancelAgendamento = (id: number) => {
+    setAgendamentosRecentes((prev) =>
+      prev.filter((agendamento) => agendamento.id !== id)
+    )
+
+    setShowModal(false)
+    setSelectedAgendamento(null)
+    console.log('Agendamento cancelado:', id)
+  }
+
   return (
     <div className='min-h-screen'>
-      <header className='border-b border-gray-300 sticky top-0 z-50'>
+      <header className='border-b border-gray-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
           <div className='font-heading font-bold text-2xl text-primary'>
             Lustro Admin
@@ -76,7 +101,7 @@ export function Admin() {
           <Link to='/admin/schedules'>
             <Card className='hover:shadow-lg transition-shadow cursor-pointer'>
               <CardContent className='p-6 text-center '>
-                <Calendar className='w-12 h-12 text-accent mx-auto mb-4 text-blue-700' />
+                <Calendar className='w-12 h-12 mx-auto mb-4 text-blue-700' />
                 <h3 className='font-heading font-semibold text-lg text-primary mb-2'>
                   Ver Agendamentos
                 </h3>
@@ -209,9 +234,7 @@ export function Admin() {
               <Button
                 variant='destructive'
                 className='flex-1'
-                onClick={() => {
-                  setShowModal(false)
-                }}
+                onClick={() => handleCancelAgendamento(selectedAgendamento.id)}
               >
                 Cancelar agendamento
               </Button>
