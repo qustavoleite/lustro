@@ -4,6 +4,8 @@ import { Login } from './pages/Login'
 import { SignUp } from './pages/SignUp'
 import { Schedule } from './pages/Schedule'
 import { Scheduling } from './pages/Scheduling'
+import { Admin } from './pages/Admin'
+import { AdminSchedules } from './pages/AdminSchedules'
 
 export function App() {
   return (
@@ -13,6 +15,8 @@ export function App() {
       <Route path='/singup' element={<SignUp />} />
       <Route path='/schedule' element={<Schedule />} />
       <Route path='/scheduling' element={<Scheduling />} />
+      <Route path='/admin' element={<Admin />} />
+      <Route path='/admin/schedules' element={<AdminSchedules />} />
     </Routes>
   )
 }
