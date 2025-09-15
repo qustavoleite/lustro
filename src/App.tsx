@@ -6,6 +6,7 @@ import { Schedule } from './pages/Schedule'
 import { Scheduling } from './pages/Scheduling'
 import { Admin } from './pages/Admin'
 import { AdminSchedules } from './pages/AdminSchedules'
+import { AdminTimetable } from './pages/AdminTimetable'
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
       <Route path='/scheduling' element={<Scheduling />} />
       <Route path='/admin' element={<Admin />} />
       <Route path='/admin/schedules' element={<AdminSchedules />} />
+      <Route path='/admin/timetable' element={<AdminTimetable />} />
     </Routes>
   )
 }
