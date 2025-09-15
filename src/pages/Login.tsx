@@ -32,7 +32,7 @@ export function Login() {
         <div className='w-full max-w-md'>
           <div className='lg:hidden text-center mb-8'>
             <h1 className='font-heading font-bold text-3xl mb-2'>Lustro</h1>
-            <p className='text-muted-foreground'>Faça login com a Lustro!</p>
+            <p>Faça login com a Lustro!</p>
           </div>
 
           <form onSubmit={handleSubmit} className='space-y-6'>
