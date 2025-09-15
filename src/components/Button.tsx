@@ -32,13 +32,14 @@ export const Button = ({
 
   const variantClasses: Record<ButtonVariant, string> = {
     default: 'bg-blue-700 text-white shadow hover:scale-102',
-    secondary: 'border border-gray-300 text-black hover:bg-blue-700 hover:text-white',
+    secondary:
+      'border border-gray-300 text-black hover:bg-blue-700 hover:text-white',
     outline:
       'border  border-gray-300 text-black hover:bg-blue-700 hover:text-white',
     ghost: 'bg-transparent hover:bg-gray-100 text-black',
     auth: 'w-full text-white font-medium py-5 bg-blue-700 border border-transparent hover:scale-102',
 
-    destructive: 'bg-red-600 text-white shadow hover:bg-red-700',
+    destructive: 'text-xs bg-red-600 text-white shadow hover:bg-red-700',
     link: 'text-blue-700 underline scale-102 hover:no-underline',
   }
 
