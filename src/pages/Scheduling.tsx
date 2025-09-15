@@ -13,7 +13,7 @@ import {
   ArrowLeft,
   X,
   CarFront,
-  LayoutTemplate
+  LayoutTemplate,
 } from 'lucide-react'
 
 type Booking = {
@@ -29,13 +29,28 @@ type Booking = {
 }
 
 export function Scheduling() {
-  // Carregar agendamentos do localStorage ou usar dados mockados
   const [bookings, setBookings] = useState<Booking[]>(() => {
     const savedBookings = localStorage.getItem('bookings')
     if (savedBookings) {
-      return JSON.parse(savedBookings)
+      const parsed = JSON.parse(savedBookings)
+      const hasLegacyIds = parsed.some(
+        (b: { id: number }) => Number(b?.id) >= 1000000
+      )
+      if (hasLegacyIds) {
+        const renumbered = [...parsed]
+          .sort((a: Booking, b: Booking) => {
+            const dateCmp = String(a.date).localeCompare(String(b.date))
+            if (dateCmp !== 0) return dateCmp
+            return String(a.time).localeCompare(String(b.time))
+          })
+          .map((b: Booking, idx: number) => ({ ...b, id: idx + 1 }))
+        localStorage.setItem('bookings', JSON.stringify(renumbered))
+        localStorage.setItem('bookingCounter', String(renumbered.length))
+        return renumbered
+      }
+      return parsed
     }
-    // Dados mockados como fallback
+    // dados mockados como fallback
     return [
       {
         id: 1,
