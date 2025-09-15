@@ -9,15 +9,28 @@ import {
   Phone,
   X,
   Search,
-  LogOut,
   ArrowLeft,
+  Check,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 export function AdminSchedules() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedAgendamento, setSelectedAgendamento] = useState<any>(null)
+  const [selectedAgendamento, setSelectedAgendamento] = useState<{
+    id: number
+    cliente: string
+    email: string
+    telefone: string
+    data: string
+    horario: string
+    tipoLavagem: string
+    modeloCarro: string
+    placa: string
+    valor: number
+    status: string
+  } | null>(null)
+  const [concluidos, setConcluidos] = useState<number[]>([])
 
   const agendamentos = [
     {
@@ -85,6 +98,13 @@ export function AdminSchedules() {
     setSelectedAgendamento(null)
   }
 
+  const handleMarcarConcluido = (id: number) => {
+    setConcluidos((prev) => [...prev, id])
+    console.log('Marcando agendamento como concluído:', id)
+  }
+
+  const isConcluido = (id: number) => concluidos.includes(id)
+
   return (
     <div className='min-h-screen bg-background'>
       {/* Header */}
@@ -138,9 +158,7 @@ export function AdminSchedules() {
                         {agendamento.cliente}
                       </p>
                       <p className='text-sm  flex items-center gap-1 mt-1'>
-                        <Phone
-                          className='w-3 h-3 text-blue-700'
-                        />
+                        <Phone className='w-3 h-3 text-blue-700' />
                         {agendamento.telefone}
                       </p>
                     </div>
@@ -172,21 +190,41 @@ export function AdminSchedules() {
                       </p>
                       <Badge
                         variant='secondary'
-                        className='bg-green-100 text-green-800'
+                        className={
+                          isConcluido(agendamento.id)
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-green-100 text-green-800'
+                        }
                       >
-                        {agendamento.status}
+                        {isConcluido(agendamento.id)
+                          ? 'Concluído'
+                          : agendamento.status}
                       </Badge>
                     </div>
                   </div>
 
                   <div className='flex items-center gap-2 ml-4'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => setSelectedAgendamento(agendamento)}
-                    >
-                      Ver Detalhes
-                    </Button>
+                    {!isConcluido(agendamento.id) ? (
+                      <Button
+                        variant='default'
+                        size='sm'
+                        onClick={() => handleMarcarConcluido(agendamento.id)}
+                        className='bg-green-600 hover:bg-green-700 text-white'
+                      >
+                        <Check className='w-4 h-4 mr-2' />
+                        Marcar como Concluída
+                      </Button>
+                    ) : (
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        disabled
+                        className='bg-gray-100 text-gray-500'
+                      >
+                        <Check className='w-4 h-4 mr-2' />
+                        Concluída
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
