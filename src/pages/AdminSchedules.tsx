@@ -31,8 +31,7 @@ export function AdminSchedules() {
     status: string
   } | null>(null)
   const [concluidos, setConcluidos] = useState<number[]>([])
-
-  const agendamentos = [
+  const [agendamentos, setAgendamentos] = useState([
     {
       id: 1,
       cliente: 'João Silva',
@@ -85,7 +84,7 @@ export function AdminSchedules() {
       valor: 80,
       status: 'Confirmado',
     },
-  ]
+  ])
 
   const filteredAgendamentos = agendamentos.filter(
     (agendamento) =>
@@ -94,8 +93,12 @@ export function AdminSchedules() {
   )
 
   const handleCancelAgendamento = (id: number) => {
-    console.log('Cancelando agendamento:', id)
+    setAgendamentos((prev) =>
+      prev.filter((agendamento) => agendamento.id !== id)
+    )
+    setConcluidos((prev) => prev.filter((concluidoId) => concluidoId !== id))
     setSelectedAgendamento(null)
+    console.log('Agendamento cancelado:', id)
   }
 
   const handleMarcarConcluido = (id: number) => {
@@ -107,8 +110,7 @@ export function AdminSchedules() {
 
   return (
     <div className='min-h-screen bg-background'>
-      {/* Header */}
-      <header className='border-b border-gray-300 sticky top-0 z-50'>
+      <header className='border-b border-gray-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
           <div className='font-heading font-bold text-2xl text-primary'>
             Lustro Admin
@@ -126,8 +128,8 @@ export function AdminSchedules() {
       </header>
 
       <div className='container mx-auto max-w-6xl px-4 py-8'>
-        <div className='flex items-center justify-between mb-8'>
-          <h1 className='font-heading font-bold text-3xl text-primary'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-3 sm:gap-4'>
+          <h1 className='font-heading font-bold text-2xl text-primary'>
             Agendamentos
           </h1>
 
@@ -150,44 +152,97 @@ export function AdminSchedules() {
               key={agendamento.id}
               className='hover:shadow-lg transition-shadow'
             >
-              <CardContent className='p-6'>
-                <div className='flex items-center justify-between'>
-                  <div className='flex-1 grid md:grid-cols-4 gap-4'>
-                    <div>
-                      <p className='font-medium text-primary text-lg'>
-                        {agendamento.cliente}
-                      </p>
-                      <p className='text-sm  flex items-center gap-1 mt-1'>
-                        <Phone className='w-3 h-3 text-blue-700' />
-                        {agendamento.telefone}
-                      </p>
+              <CardContent className='p-4 sm:p-6'>
+                <div className='space-y-4'>
+                  <div className='hidden md:flex md:items-center md:justify-between'>
+                    <div className='flex-1 grid md:grid-cols-4 gap-4'>
+                      <div>
+                        <p className='font-medium text-primary text-lg'>
+                          {agendamento.cliente}
+                        </p>
+                        <p className='text-sm flex items-center gap-1 mt-1'>
+                          <Phone className='w-3 h-3 text-blue-700' />
+                          {agendamento.telefone}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className='text-sm flex items-center gap-1'>
+                          <Calendar className='w-3 h-3 text-blue-700' />
+                          {agendamento.data}
+                        </p>
+                        <p className='text-sm flex items-center gap-1 mt-1'>
+                          <Clock className='w-3 h-3 text-blue-700' />
+                          {agendamento.horario}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className='text-sm font-medium text-primary'>
+                          Lavagem {agendamento.tipoLavagem}
+                        </p>
+                        <p className='text-sm flex items-center gap-1 mt-1'>
+                          <Car className='w-3 h-3 text-blue-700' />
+                          <span className='truncate'>
+                            {agendamento.modeloCarro} - {agendamento.placa}
+                          </span>
+                        </p>
+                      </div>
+
+                      <div className='text-left'>
+                        <p className='text-lg font-bold text-primary'>
+                          R$ {agendamento.valor}
+                        </p>
+                        <Badge
+                          variant='secondary'
+                          className={
+                            isConcluido(agendamento.id)
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
+                          }
+                        >
+                          {isConcluido(agendamento.id)
+                            ? 'Concluído'
+                            : agendamento.status}
+                        </Badge>
+                      </div>
                     </div>
 
-                    <div>
-                      <p className='text-sm  flex items-center gap-1'>
-                        <Calendar className='w-3 h-3 text-blue-700' />
-                        {agendamento.data}
-                      </p>
-                      <p className='text-sm  flex items-center gap-1 mt-1'>
-                        <Clock className='w-3 h-3 text-blue-700' />
-                        {agendamento.horario}
-                      </p>
+                    <div className='flex items-center gap-2 ml-4'>
+                      {!isConcluido(agendamento.id) ? (
+                        <Button
+                          variant='default'
+                          size='sm'
+                          onClick={() => handleMarcarConcluido(agendamento.id)}
+                          className='bg-green-600 hover:bg-green-700 text-white'
+                        >
+                          <Check className='w-4 h-4 mr-2' />
+                          Marcar como Concluída
+                        </Button>
+                      ) : (
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          disabled
+                          className='bg-gray-100 text-gray-500'
+                        >
+                          <Check className='w-4 h-4 mr-2' />
+                          Concluída
+                        </Button>
+                      )}
                     </div>
+                  </div>
 
-                    <div>
-                      <p className='text-sm font-medium text-primary'>
-                        Lavagem {agendamento.tipoLavagem}
-                      </p>
-                      <p className='text-sm  flex items-center gap-1 mt-1'>
-                        <Car className='w-3 h-3 text-blue-700' />
-                        {agendamento.modeloCarro} - {agendamento.placa}
-                      </p>
-                    </div>
-
-                    <div className='text-left'>
-                      <p className='text-lg font-bold text-primary'>
-                        R$ {agendamento.valor}
-                      </p>
+                  <div className='md:hidden space-y-4'>
+                    <div className='flex items-start justify-between'>
+                      <div>
+                        <p className='font-medium text-primary text-lg leading-tight'>
+                          {agendamento.cliente}
+                        </p>
+                        <p className='text-lg font-bold text-primary mt-1'>
+                          R$ {agendamento.valor}
+                        </p>
+                      </div>
                       <Badge
                         variant='secondary'
                         className={
@@ -201,30 +256,61 @@ export function AdminSchedules() {
                           : agendamento.status}
                       </Badge>
                     </div>
-                  </div>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                      <div className='space-y-2'>
+                        <p className='text-sm flex items-center gap-2'>
+                          <Phone className='w-4 h-4 text-blue-700 flex-shrink-0' />
+                          <span className='truncate'>
+                            {agendamento.telefone}
+                          </span>
+                        </p>
+                        <p className='text-sm flex items-center gap-2'>
+                          <Calendar className='w-4 h-4 text-blue-700 flex-shrink-0' />
+                          {agendamento.data}
+                        </p>
+                      </div>
 
-                  <div className='flex items-center gap-2 ml-4'>
-                    {!isConcluido(agendamento.id) ? (
-                      <Button
-                        variant='default'
-                        size='sm'
-                        onClick={() => handleMarcarConcluido(agendamento.id)}
-                        className='bg-green-600 hover:bg-green-700 text-white'
-                      >
-                        <Check className='w-4 h-4 mr-2' />
-                        Marcar como Concluída
-                      </Button>
-                    ) : (
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        disabled
-                        className='bg-gray-100 text-gray-500'
-                      >
-                        <Check className='w-4 h-4 mr-2' />
-                        Concluída
-                      </Button>
-                    )}
+                      <div className='space-y-2'>
+                        <p className='text-sm flex items-center gap-2'>
+                          <Clock className='w-4 h-4 text-blue-700 flex-shrink-0' />
+                          {agendamento.horario}
+                        </p>
+                        <p className='text-sm flex items-center gap-2'>
+                          <Car className='w-4 h-4 text-blue-700 flex-shrink-0' />
+                          <span className='truncate'>
+                            {agendamento.modeloCarro} - {agendamento.placa}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className='text-sm font-medium text-primary'>
+                        Lavagem {agendamento.tipoLavagem}
+                      </p>
+                    </div>
+                    <div className='pt-2'>
+                      {!isConcluido(agendamento.id) ? (
+                        <Button
+                          variant='default'
+                          size='sm'
+                          onClick={() => handleMarcarConcluido(agendamento.id)}
+                          className='w-full bg-green-600 hover:bg-green-700 text-white'
+                        >
+                          <Check className='w-4 h-4 mr-2' />
+                          Marcar como Concluída
+                        </Button>
+                      ) : (
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          disabled
+                          className='w-full bg-gray-100 text-gray-500'
+                        >
+                          <Check className='w-4 h-4 mr-2' />
+                          Concluída
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
