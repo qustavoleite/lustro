@@ -50,11 +50,11 @@ export function Scheduling() {
       }
       return parsed
     }
-    // dados mockados como fallback
+
     return [
       {
         id: 1,
-        date: '2025-01-15',
+        date: '2024-12-15',
         time: '09:00',
         washType: 'completa',
         carModel: 'sedan',
@@ -64,14 +64,47 @@ export function Scheduling() {
         status: 'agendado',
       },
       {
+        id: 2,
+        date: '2024-12-20',
+        time: '14:00',
+        washType: 'externa',
+        carModel: 'hatch',
+        plate: 'XYZ-5678',
+        phone: '(11) 88888-8888',
+        price: 40,
+        status: 'agendado',
+      },
+      {
         id: 3,
-        date: '2025-01-17',
-        time: '16:00',
+        date: '2025-01-15',
+        time: '10:00',
         washType: 'interna',
         carModel: 'suv',
         plate: 'DEF-9012',
         phone: '(11) 77777-7777',
         price: 50,
+        status: 'agendado',
+      },
+      {
+        id: 4,
+        date: '2025-01-17',
+        time: '16:00',
+        washType: 'completa',
+        carModel: 'pickup',
+        plate: 'GHI-3456',
+        phone: '(11) 66666-6666',
+        price: 80,
+        status: 'agendado',
+      },
+      {
+        id: 5,
+        date: '2025-01-20',
+        time: '08:00',
+        washType: 'externa',
+        carModel: 'coupe',
+        plate: 'JKL-7890',
+        phone: '(11) 55555-5555',
+        price: 40,
         status: 'agendado',
       },
     ]
@@ -83,12 +116,20 @@ export function Scheduling() {
         (booking: Booking) => booking.id !== id
       )
       setBookings(updatedBookings)
-      // Salvar no localStorage
       localStorage.setItem('bookings', JSON.stringify(updatedBookings))
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, booking?: Booking) => {
+    // Se o agendamento passou da data e ainda está como 'agendado', mostra como expirado
+    if (booking && status === 'agendado' && isBookingExpired(booking)) {
+      return (
+        <Badge className='bg-orange-100 text-orange-800 hover:bg-orange-100'>
+          Expirado
+        </Badge>
+      )
+    }
+
     switch (status) {
       case 'agendado':
         return (
@@ -163,12 +204,40 @@ export function Scheduling() {
     return `${weekday}, ${formattedDate}`
   }
 
-  const futureBookings = bookings.filter((booking: Booking) => {
+  const isBookingExpired = (booking: Booking) => {
     const bookingDate = new Date(booking.date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    return bookingDate >= today && booking.status === 'agendado'
-  })
+    return bookingDate < today
+  }
+
+  const activeBookings = bookings
+    .filter((booking: Booking) => {
+      return booking.status === 'agendado'
+    })
+    .sort((a: Booking, b: Booking) => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const dateA = new Date(a.date)
+      const dateB = new Date(b.date)
+
+      const isExpiredA = isBookingExpired(a)
+      const isExpiredB = isBookingExpired(b)
+
+      // Se um é expirado e outro não, o não expirado vem primeiro
+      if (isExpiredA && !isExpiredB) return 1
+      if (!isExpiredA && isExpiredB) return -1
+
+      // Se ambos são expirados ou ambos são futuros, ordena por data
+      // Para futuros: mais próximo primeiro (data crescente)
+      // Para expirados: mais recente primeiro (data decrescente)
+      if (isExpiredA && isExpiredB) {
+        return dateB.getTime() - dateA.getTime() // Mais recente primeiro
+      } else {
+        return dateA.getTime() - dateB.getTime() // Mais próximo primeiro
+      }
+    })
 
   return (
     <div className='min-h-screen'>
@@ -199,21 +268,17 @@ export function Scheduling() {
           <h1 className='font-heading font-bold text-3xl md:text-4xl text-primary mb-4'>
             Meus Agendamentos
           </h1>
-          <p className='text-lg text-muted-foreground'>
-            Visualize e cancele seus agendamentos futuros
-          </p>
+          <p className='text-lg'>Visualize e gerencie seus agendamentos</p>
         </div>
 
-        {futureBookings.length === 0 ? (
+        {activeBookings.length === 0 ? (
           <Card>
             <CardContent className='text-center py-12'>
-              <Car className='w-16 h-16 text-muted-foreground mx-auto mb-4' />
+              <Car className='w-16 h-16 mx-auto mb-4' />
               <h3 className='text-xl font-semibold text-primary mb-2'>
                 Nenhum agendamento encontrado
               </h3>
-              <p className='text-muted-foreground mb-6'>
-                Você ainda não possui agendamentos.
-              </p>
+              <p className='mb-6'>Você ainda não possui agendamentos.</p>
               <Link to='/schedule'>
                 <Button>Fazer Primeiro Agendamento</Button>
               </Link>
@@ -221,28 +286,29 @@ export function Scheduling() {
           </Card>
         ) : (
           <div className='space-y-6'>
-            {futureBookings.map((booking: Booking) => (
+            {activeBookings.map((booking: Booking) => (
               <Card
                 key={booking.id}
                 className='hover:shadow-lg transition-shadow'
               >
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-4'>
+                <CardHeader className='flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0 pb-4'>
                   <CardTitle className='text-lg'>
                     Agendamento #{booking.id}
                   </CardTitle>
-                  <div className='flex flex-col md:flex-row gap-4'>
-                    {getStatusBadge(booking.status)}
-                    {booking.status === 'agendado' && (
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={() => handleCancelBooking(booking.id)}
-                        className='text-red-600 hover:text-red-700 hover:bg-red-600'
-                      >
-                        <X className='w-4 h-4 mr-1' />
-                        Cancelar
-                      </Button>
-                    )}
+                  <div className='flex flex-row items-center gap-3 sm:gap-4'>
+                    {getStatusBadge(booking.status, booking)}
+                    {booking.status === 'agendado' &&
+                      !isBookingExpired(booking) && (
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => handleCancelBooking(booking.id)}
+                          className='hover:bg-red-600'
+                        >
+                          <X className='w-4 h-4 mr-1' />
+                          Cancelar
+                        </Button>
+                      )}
                   </div>
                 </CardHeader>
                 <CardContent>
