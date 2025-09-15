@@ -115,9 +115,11 @@ export function SignUp() {
               />
             </div>
 
-            <Button variant='auth' type='submit'>
-              Cadastrar
-            </Button>
+            <Link to='/schedule'>
+              <Button variant='auth' type='submit'>
+                Cadastrar
+              </Button>
+            </Link>
           </form>
 
           <div className='mt-8 text-center'>

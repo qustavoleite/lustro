@@ -65,9 +65,12 @@ export function Login() {
               />
             </div>
 
-            <Button variant='auth' type='submit'>
-              Entrar
-            </Button>
+            <Link to='/admin'>
+              <Button variant='auth' type='submit'>
+                Entrar
+              </Button>
+            </Link>
+
           </form>
 
           <div className='mt-8 text-center'>
