@@ -6,7 +6,7 @@ import { Label } from '../components/Label'
 import { Select, SelectItem } from '../components/Select'
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup'
 import { Link } from 'react-router-dom'
-import { Calendar, Car, Sparkles, Shield, User, LogOut } from 'lucide-react'
+import { Calendar, User, LogOut } from 'lucide-react'
 
 export function Schedule() {
   const [selectedDate, setSelectedDate] = useState('')
@@ -67,8 +67,31 @@ export function Schedule() {
   }
 
   const handleFinalizeBooking = () => {
+    let existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]')
+    const hasLegacyIds = existingBookings.some(
+      (b: { id: number }) => Number(b?.id) >= 1000000
+    )
+    if (hasLegacyIds) {
+      const renumbered = [...existingBookings]
+        .sort((a: any, b: any) => {
+          const dateCmp = String(a.date).localeCompare(String(b.date))
+          if (dateCmp !== 0) return dateCmp
+          return String(a.time).localeCompare(String(b.time))
+        })
+        .map((b: any, idx: number) => ({ ...b, id: idx + 1 }))
+      localStorage.setItem('bookings', JSON.stringify(renumbered))
+      localStorage.setItem('bookingCounter', String(renumbered.length))
+      existingBookings = renumbered
+    }
+    const COUNTER_KEY = 'bookingCounter'
+    let counter = parseInt(localStorage.getItem(COUNTER_KEY) || '0', 10)
+    if (!Number.isFinite(counter) || counter < 0)
+      counter = existingBookings.length
+    const nextId = counter + 1
+    localStorage.setItem(COUNTER_KEY, String(nextId))
+
     const newBooking = {
-      id: Date.now(),
+      id: nextId,
       date: selectedDate,
       time: selectedTime,
       washType: washType,
@@ -79,10 +102,6 @@ export function Schedule() {
       price: calculatePrice(),
       status: 'agendado',
     }
-
-    const existingBookings = JSON.parse(
-      localStorage.getItem('bookings') || '[]'
-    )
 
     const updatedBookings = [...existingBookings, newBooking]
 
@@ -180,15 +199,11 @@ export function Schedule() {
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Tipo de Lavagem</Label>
-                  <p className='font-medium capitalize'>
-                    {washType}
-                  </p>
+                  <p className='font-medium capitalize'>{washType}</p>
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Modelo do Carro</Label>
-                  <p className='font-medium capitalize'>
-                    {carModel}
-                  </p>
+                  <p className='font-medium capitalize'>{carModel}</p>
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Proprietário</Label>
@@ -247,7 +262,7 @@ export function Schedule() {
             <Link to='/scheduling'>
               <Button variant='secondary' size='sm'>
                 <User className='w-4 h-4 mr-2' />
-                Meus Agendamentos
+                Minha agenda
               </Button>
             </Link>
             <Link to='/'>
