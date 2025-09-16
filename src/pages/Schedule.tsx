@@ -90,9 +90,13 @@ export function Schedule() {
     const nextId = counter + 1
     localStorage.setItem(COUNTER_KEY, String(nextId))
 
+    const normalizedDate = selectedDate.includes('-')
+      ? selectedDate
+      : new Date(selectedDate).toISOString().split('T')[0]
+
     const newBooking = {
       id: nextId,
-      date: selectedDate,
+      date: normalizedDate,
       time: selectedTime,
       washType: washType,
       carModel: carModel,
@@ -123,13 +127,22 @@ export function Schedule() {
 
   const formatDateForDisplay = (dateString: string) => {
     if (!dateString) return ''
-    const date = new Date(dateString)
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
     return date.toLocaleDateString('pt-BR', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     })
+  }
+
+  const getTodayString = () => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
   const formatPhone = (value: string) => {
@@ -304,16 +317,22 @@ export function Schedule() {
                     type='date'
                     value={selectedDate}
                     onChange={(e) => {
-                      setSelectedDate(e.target.value)
+                      const inputValue = e.target.value
+                      console.log('Data selecionada:', inputValue)
+                      setSelectedDate(inputValue)
                       setSelectedTime('')
                     }}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={getTodayString()}
                     className='w-full'
                   />
                 </div>
 
                 {selectedDate && (
                   <div>
+                    <div className='mb-2 p-2 bg-blue-50 rounded text-sm'>
+                      <strong>Data selecionada:</strong>{' '}
+                      {formatDateForDisplay(selectedDate)}
+                    </div>
                     <Label>Horários Disponíveis</Label>
                     <div className='grid grid-cols-4 gap-2 mt-2'>
                       {timeSlots.map((time) => {
