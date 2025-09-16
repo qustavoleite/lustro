@@ -49,7 +49,7 @@ export function SignUp() {
         <div className='w-full max-w-md'>
           <div className='lg:hidden text-center mb-8'>
             <h1 className='font-heading font-bold text-3xl mb-2'>Lustro</h1>
-            <p className='text-muted-foreground'>Crie sua conta na Lustro!</p>
+            <p>Crie sua conta na Lustro!</p>
           </div>
 
           <form onSubmit={handleSubmit} className='space-y-6'>
@@ -115,17 +115,19 @@ export function SignUp() {
               />
             </div>
 
-            <Button variant='auth' type='submit'>
-              Cadastrar
-            </Button>
+            <Link to='/schedule'>
+              <Button variant='auth' type='submit'>
+                Cadastrar
+              </Button>
+            </Link>
           </form>
 
           <div className='mt-8 text-center'>
-            <p className='text-xs text-muted-foreground mb-4'>
+            <p className='text-xs mb-4'>
               Ao se inscrever na Lustro, você concorda com nossa Política de
               Privacidade e Termos de Serviço
             </p>
-            <p className='text-sm text-muted-foreground'>
+            <p className='text-sm'>
               Já tem Conta?{' '}
               <Link to='/login' className='font-medium text-blue-800'>
                 Fazer Login
