@@ -14,6 +14,7 @@ import {
   X,
   CarFront,
   LayoutTemplate,
+  Trash2,
 } from 'lucide-react'
 
 type Booking = {
@@ -117,6 +118,24 @@ export function Scheduling() {
       )
       setBookings(updatedBookings)
       localStorage.setItem('bookings', JSON.stringify(updatedBookings))
+    }
+  }
+
+  const handleRemoveExpiredBookings = () => {
+    const hasExpired = bookings.some(
+      (b: Booking) => b.status === 'agendado' && isBookingExpired(b)
+    )
+    if (!hasExpired) return
+    if (
+      confirm(
+        'Remover todos os agendamentos expirados? Esta ação não pode ser desfeita.'
+      )
+    ) {
+      const updated = bookings.filter(
+        (b: Booking) => !(b.status === 'agendado' && isBookingExpired(b))
+      )
+      setBookings(updated)
+      localStorage.setItem('bookings', JSON.stringify(updated))
     }
   }
 
@@ -239,6 +258,10 @@ export function Scheduling() {
       }
     })
 
+  const expiredCount = bookings.filter(
+    (b: Booking) => b.status === 'agendado' && isBookingExpired(b)
+  ).length
+
   return (
     <div className='min-h-screen'>
       <header className='border-b border-gray-300'>
@@ -269,6 +292,19 @@ export function Scheduling() {
             Meus Agendamentos
           </h1>
           <p className='text-lg'>Visualize e gerencie seus agendamentos</p>
+          {expiredCount > 0 && (
+            <div className='mt-4 flex justify-center'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={handleRemoveExpiredBookings}
+                className='hover:bg-red-600'
+              >
+                <Trash2 className='w-4 h-4 mr-2' />
+                Remover expirados ({expiredCount})
+              </Button>
+            </div>
+          )}
         </div>
 
         {activeBookings.length === 0 ? (

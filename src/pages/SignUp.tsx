@@ -130,7 +130,7 @@ export function SignUp() {
             <p className='text-sm'>
               Já tem Conta?{' '}
               <Link to='/login' className='font-medium text-blue-800'>
-                Fazer Login
+                Fazer Login 
               </Link>
             </p>
           </div>
