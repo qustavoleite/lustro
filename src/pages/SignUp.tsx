@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
+import { Eye, EyeOff } from 'lucide-react'
 
 export function SignUp() {
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -87,32 +90,64 @@ export function SignUp() {
               <label htmlFor='senha' className='text-sm font-medium'>
                 Senha
               </label>
-              <Input
-                id='senha'
-                name='senha'
-                type='password'
-                placeholder='Digite sua senha'
-                value={formData.senha}
-                onChange={handleChange}
-                minLength={8}
-                required
-              />
+              <div className='relative'>
+                <Input
+                  id='senha'
+                  name='senha'
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder='Digite sua senha'
+                  value={formData.senha}
+                  onChange={handleChange}
+                  minLength={8}
+                  required
+                  className='pr-10'
+                />
+                <button
+                  type='button'
+                  onClick={() => setShowPassword(!showPassword)}
+                  className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none'
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? (
+                    <EyeOff className='h-5 w-5' />
+                  ) : (
+                    <Eye className='h-5 w-5' />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className='space-y-2'>
               <label htmlFor='confirmarSenha' className='text-sm font-medium'>
                 Confirmar Senha
               </label>
-              <Input
-                id='confirmarSenha'
-                name='confirmarSenha'
-                type='password'
-                placeholder='Confirme sua senha'
-                value={formData.confirmarSenha}
-                onChange={handleChange}
-                minLength={8}
-                required
-              />
+              <div className='relative'>
+                <Input
+                  id='confirmarSenha'
+                  name='confirmarSenha'
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder='Confirme sua senha'
+                  value={formData.confirmarSenha}
+                  onChange={handleChange}
+                  minLength={8}
+                  required
+                  className='pr-10'
+                />
+                <button
+                  type='button'
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none'
+                  aria-label={
+                    showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'
+                  }
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className='h-5 w-5' />
+                  ) : (
+                    <Eye className='h-5 w-5' />
+                  )}
+                </button>
+              </div>
             </div>
 
             <Link to='/schedule'>
@@ -130,7 +165,7 @@ export function SignUp() {
             <p className='text-sm'>
               Já tem Conta?{' '}
               <Link to='/login' className='font-medium text-blue-800'>
-                Fazer Login 
+                Fazer Login
               </Link>
             </p>
           </div>
