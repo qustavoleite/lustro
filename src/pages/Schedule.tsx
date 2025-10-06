@@ -178,7 +178,7 @@ export function Schedule() {
               <Link to='/scheduling'>
                 <Button variant='secondary' size='sm'>
                   <User className='w-4 h-4 mr-2' />
-                  Meus Agendamentos
+                  Agendamentos
                 </Button>
               </Link>
               <Link to='/'>
@@ -253,7 +253,7 @@ export function Schedule() {
                   className='flex-1 bg-blue-700 hover:bg-accent/90'
                   onClick={handleFinalizeBooking}
                 >
-                  Confirmar Agendamento
+                  Confirmar
                 </Button>
               </div>
             </CardContent>
@@ -265,7 +265,6 @@ export function Schedule() {
 
   return (
     <div className='min-h-screen bg-background'>
-      {/* Header */}
       <header className='border-b border-gray-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
           <div className='font-heading font-bold text-2xl text-primary'>

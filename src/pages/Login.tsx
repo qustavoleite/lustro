@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
+import { Eye, EyeOff } from 'lucide-react'
+
 
 export function Login() {
+  const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
@@ -54,15 +57,30 @@ export function Login() {
               <label htmlFor='password' className='text-sm font-medium'>
                 Senha
               </label>
-              <Input
-                id='password'
-                type='password'
-                placeholder='Digite sua senha'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={8}
-                required
-              />
+              <div className='relative'>
+                <Input
+                  id='password'
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder='Digite sua senha'
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={8}
+                  required
+                  className='pr-10'
+                />
+                <button
+                  type='button'
+                  onClick={() => setShowPassword(!showPassword)}
+                  className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none'
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? (
+                    <EyeOff className='h-5 w-5' />
+                  ) : (
+                    <Eye className='h-5 w-5' />
+                  )}
+                </button>
+              </div>
             </div>
 
             <Link to='/admin'>
@@ -70,7 +88,6 @@ export function Login() {
                 Entrar
               </Button>
             </Link>
-
           </form>
 
           <div className='mt-8 text-center'>
