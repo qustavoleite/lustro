@@ -1,20 +1,99 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Eye, EyeOff } from 'lucide-react'
 
-
 export function Login() {
+  const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Login:', { email, password })
+    setError('')
+    setIsLoading(true)
+
+    try {
+      const payload = {
+        email: email.trim().toLowerCase(),
+        senha: password,
+      }
+
+      console.log('Tentando login com:', { email: payload.email })
+
+      if (
+        payload.email === 'admin@gmail.com' &&
+        payload.senha === 'Admin@007'
+      ) {
+        console.log('Credenciais de administrador detectadas')
+
+        const adminUser = {
+          id: 'admin',
+          email: 'admin@gmail.com',
+          nome: 'Administrador',
+          role: 'admin',
+        }
+        localStorage.setItem('authToken', 'admin-token-' + Date.now())
+        localStorage.setItem('user', JSON.stringify(adminUser))
+
+        console.log('Login de administrador realizado com sucesso!')
+        navigate('/admin')
+        return 
+      }
+
+      const response = await fetch(
+        'https://lustro-black.vercel.app/api/auth/login',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        }
+      )
+
+      console.log('Status da resposta:', response.status)
+
+      const data = await response.json()
+      console.log('Resposta da API:', data)
+
+      if (!response.ok) {
+        const errorMessage =
+          data.error || data.message || data.msg || 'Credenciais inválidas'
+        throw new Error(errorMessage)
+      }
+
+      // Salva o token e dados do usuário normal
+      if (data.token) {
+        localStorage.setItem('authToken', data.token)
+        console.log('Token salvo com sucesso')
+      }
+
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user))
+        console.log('Dados do usuário salvos:', data.user)
+      }
+
+      // Redireciona usuários normais para /schedule
+      console.log('Login de usuário normal realizado com sucesso!')
+      navigate('/schedule')
+    } catch (err) {
+      console.error('Erro no login:', err)
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Erro ao fazer login. Verifique suas credenciais.'
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
+  // Resto do componente permanece igual...
   return (
     <div className='min-h-screen flex'>
       <div className='hidden lg:flex lg:w-1/2 bg-gray-100 flex-col justify-center px-12'>
@@ -39,6 +118,12 @@ export function Login() {
           </div>
 
           <form onSubmit={handleSubmit} className='space-y-6'>
+            {error && (
+              <div className='bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm'>
+                {error}
+              </div>
+            )}
+
             <div className='space-y-2'>
               <label htmlFor='email' className='text-sm font-medium'>
                 Email
@@ -48,7 +133,11 @@ export function Login() {
                 type='email'
                 placeholder='seu@email.com'
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  if (error) setError('')
+                }}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -63,8 +152,12 @@ export function Login() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder='Digite sua senha'
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    if (error) setError('')
+                  }}
                   minLength={8}
+                  disabled={isLoading}
                   required
                   className='pr-10'
                 />
@@ -73,6 +166,7 @@ export function Login() {
                   onClick={() => setShowPassword(!showPassword)}
                   className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none'
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <EyeOff className='h-5 w-5' />
@@ -83,11 +177,9 @@ export function Login() {
               </div>
             </div>
 
-            <Link to='/admin'>
-              <Button variant='auth' type='submit'>
-                Entrar
-              </Button>
-            </Link>
+            <Button variant='auth' type='submit' disabled={isLoading}>
+              {isLoading ? 'Entrando...' : 'Entrar'}
+            </Button>
           </form>
 
           <div className='mt-8 text-center'>

@@ -74,7 +74,7 @@ export function SignUp() {
 
       console.log('Cadastro realizado com sucesso:', data)
       alert('Cadastro realizado com sucesso!')
-      navigate('/login')
+      navigate('/schedule')
     } catch (err) {
       console.error('Erro no cadastro:', err)
       setError(
