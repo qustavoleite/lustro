@@ -7,6 +7,7 @@ import { Scheduling } from './pages/Scheduling'
 import { Admin } from './pages/Admin'
 import { AdminSchedules } from './pages/AdminSchedules'
 import { AdminTimetable } from './pages/AdminTimetable'
+import { ProtectedAdminRoute } from './pages/ProtectedRoute'
 
 export function App() {
   return (
@@ -16,9 +17,31 @@ export function App() {
       <Route path='/singup' element={<SignUp />} />
       <Route path='/schedule' element={<Schedule />} />
       <Route path='/scheduling' element={<Scheduling />} />
-      <Route path='/admin' element={<Admin />} />
-      <Route path='/admin/schedules' element={<AdminSchedules />} />
-      <Route path='/admin/timetable' element={<AdminTimetable />} />
+
+      <Route
+        path='/admin'
+        element={
+          <ProtectedAdminRoute>
+            <Admin />
+          </ProtectedAdminRoute>
+        }
+      />
+      <Route           
+        path='/admin/schedules'
+        element={
+          <ProtectedAdminRoute>
+            <AdminSchedules />
+          </ProtectedAdminRoute>
+        }
+      />
+      <Route
+        path='/admin/timetable'
+        element={
+          <ProtectedAdminRoute>
+            <AdminTimetable />
+          </ProtectedAdminRoute>
+        }
+      />
     </Routes>
   )
 }
