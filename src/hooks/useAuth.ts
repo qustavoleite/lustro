@@ -1,22 +1,49 @@
+import { useEffect, useState } from 'react'
+
 export function useAuth() {
-  const userData = localStorage.getItem('user')
-  const token = localStorage.getItem('authToken')
-  let user = null
+  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
 
-  if (userData) {
-    try {
-      user = JSON.parse(userData)
-    } catch (error) {
-      console.error('Erro ao analisar dados do usuário:', error)
+  useEffect(() => {
+    const checkAuth = () => {
+      const userData = localStorage.getItem('user')
+      const token = localStorage.getItem('authToken')
+
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData)
+          setUser(parsedUser)
+
+          const userIsAdmin = parsedUser.email === 'admin@lustro.com'
+          setIsAdmin(userIsAdmin)
+        } catch (error) {
+          // Ignorar erro de parse
+        }
+      }
+
+      setIsAuthenticated(!!token)
+      setIsLoading(false)
     }
-  }
 
-  const isAdmin = user?.email === 'admin@gmail.com'
-  const isAuthenticated = !!token
+    checkAuth()
+
+    const handleStorageChange = () => {
+      checkAuth()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
 
   return {
     user,
     isAdmin,
     isAuthenticated,
+    isLoading,
   }
 }
