@@ -1,415 +1,585 @@
 import { Button } from '../components/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card'
-import { Input } from '../components/Input'
-import { Badge } from '../components/Badge'
 import {
   Calendar,
   Clock,
   Car,
   Phone,
-  X,
-  Search,
+  CreditCard,
+  LogOut,
   ArrowLeft,
-  Check,
+  Loader,
+  RefreshCw,
+  CarFront,
+  LayoutTemplate,
+  X,
 } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
+
+interface Agendamento {
+  id: number
+  data_agendamento: string
+  horario_agendamento: string
+  servico_id: number
+  veiculo_placa: string
+  modelo_veiculo_nome: string
+  nome_proprietario: string
+  telefone: string
+  observacoes: string
+  status: string
+  servico_nome?: string
+  valor_total?: number
+  phone?: string
+  telefone_contato?: string
+  placa_veiculo?: string
+  modelo?: string
+  marca?: string
+  cor?: string
+  tipo_veiculo?: string
+}
 
 export function AdminSchedules() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedAgendamento, setSelectedAgendamento] = useState<{
-    id: number
-    cliente: string
-    email: string
-    telefone: string
-    data: string
-    horario: string
-    tipoLavagem: string
-    modeloCarro: string
-    placa: string
-    valor: number
-    status: string
-  } | null>(null)
-  const [concluidos, setConcluidos] = useState<number[]>([])
-  const [agendamentos, setAgendamentos] = useState([
-    {
-      id: 1,
-      cliente: 'João Silva',
-      email: 'joao@email.com',
-      telefone: '(11) 99999-1111',
-      data: '17/01/2025',
-      horario: '09:00',
-      tipoLavagem: 'Completa',
-      modeloCarro: 'Sedan',
-      placa: 'ABC-1234',
-      valor: 80,
-      status: 'Confirmado',
-    },
-    {
-      id: 2,
-      cliente: 'Maria Santos',
-      email: 'maria@email.com',
-      telefone: '(11) 99999-2222',
-      data: '17/01/2025',
-      horario: '10:30',
-      tipoLavagem: 'Externa',
-      modeloCarro: 'Hatch',
-      placa: 'DEF-5678',
-      valor: 40,
-      status: 'Confirmado',
-    },
-    {
-      id: 3,
-      cliente: 'Pedro Costa',
-      email: 'pedro@email.com',
-      telefone: '(11) 99999-3333',
-      data: '18/01/2025',
-      horario: '14:00',
-      tipoLavagem: 'Interna',
-      modeloCarro: 'SUV',
-      placa: 'GHI-9012',
-      valor: 50,
-      status: 'Confirmado',
-    },
-    {
-      id: 4,
-      cliente: 'Ana Oliveira',
-      email: 'ana@email.com',
-      telefone: '(11) 99999-4444',
-      data: '19/01/2025',
-      horario: '16:00',
-      tipoLavagem: 'Completa',
-      modeloCarro: 'Pickup',
-      placa: 'JKL-3456',
-      valor: 80,
-      status: 'Confirmado',
-    },
-  ])
+  const navigate = useNavigate()
+  const { isAuthenticated, isAdmin, isLoading: authLoading } = useAuth()
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
+  const [cancelingId, setCancelingId] = useState<number | null>(null)
 
-  const filteredAgendamentos = agendamentos.filter(
-    (agendamento) =>
-      agendamento.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      agendamento.placa.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        navigate('/login')
+        return
+      }
+
+      if (!isAdmin) {
+        navigate('/schedule')
+        return
+      }
+    }
+  }, [isAuthenticated, isAdmin, authLoading, navigate])
+
+  const fetchAgendamentos = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const token = localStorage.getItem('authToken')
+
+      if (!token) {
+        setError('Token de autenticação não encontrado')
+        setLoading(false)
+        return
+      }
+
+      const userData = localStorage.getItem('user')
+      let isUserAdmin = false
+      if (userData) {
+        try {
+          const user = JSON.parse(userData)
+          isUserAdmin =
+            user &&
+            (user.email === 'admin@gmail.com' ||
+              user.email === 'admin@lustro.com' ||
+              user.role === 'admin')
+        } catch {
+          // Ignorar erro de parse
+        }
+      }
+
+      const endpoints = isUserAdmin
+        ? [
+            'https://lustro-black.vercel.app/api/admin/dashboard/agendamentos',
+            'https://lustro-black.vercel.app/api/agendamentos',
+          ]
+        : ['https://lustro-black.vercel.app/api/agendamentos']
+
+      let agendamentosArray: unknown[] = []
+      let lastError = ''
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          })
+
+          if (!response.ok) {
+            if (response.status === 401) {
+              lastError =
+                'API não autorizou o acesso. Verifique se o backend está configurado corretamente.'
+              continue
+            } else if (response.status === 403) {
+              lastError = 'Acesso negado. Permissões insuficientes.'
+              continue
+            } else if (response.status === 404) {
+              lastError = `Endpoint não encontrado: ${endpoint}`
+              continue
+            } else {
+              lastError = `Erro ${response.status}: ${response.statusText}`
+              continue
+            }
+          }
+
+          const data = await response.json()
+
+          if (Array.isArray(data)) {
+            agendamentosArray = data
+          } else if (data.agendamentos && Array.isArray(data.agendamentos)) {
+            agendamentosArray = data.agendamentos
+          } else if (data.data && Array.isArray(data.data)) {
+            agendamentosArray = data.data
+          } else if (data.results && Array.isArray(data.results)) {
+            agendamentosArray = data.results
+          } else {
+            const arrays = Object.values(data).filter((value) =>
+              Array.isArray(value)
+            )
+            if (arrays.length > 0) {
+              agendamentosArray = arrays[0] as unknown[]
+            } else {
+              lastError = `Formato de resposta não reconhecido do endpoint ${endpoint}`
+              continue
+            }
+          }
+
+          if (agendamentosArray.length > 0) {
+            break
+          } else if (endpoint === endpoints[0]) {
+            if (!isUserAdmin) {
+              break
+            }
+          }
+        } catch (err) {
+          lastError = err instanceof Error ? err.message : 'Erro desconhecido'
+          continue
+        }
+      }
+
+      if (
+        agendamentosArray.length === 0 &&
+        lastError &&
+        !lastError.includes('404')
+      ) {
+        setError(lastError)
+      }
+
+      const normalizedAgendamentos: Agendamento[] = (
+        agendamentosArray as Record<string, unknown>[]
+      ).map((ag) => ({
+        id: Number(ag.id) || 0,
+        data_agendamento: String(ag.data_agendamento || ag.data || ''),
+        horario_agendamento: String(ag.horario_agendamento || ag.horario || ''),
+        servico_id: Number(ag.servico_id) || 0,
+        veiculo_placa: String(
+          ag.veiculo_placa || ag.placa_veiculo || ag.placa || ''
+        ),
+        modelo_veiculo_nome: String(
+          ag.modelo_veiculo_nome || ag.modelo_veiculo || ag.modelo || ''
+        ),
+        nome_proprietario: String(
+          ag.nome_proprietario || ag.cliente_nome || ''
+        ),
+        telefone: String(
+          ag.telefone ||
+            ag.telefone_cliente ||
+            ag.phone ||
+            ag.telefone_contato ||
+            ''
+        ),
+        observacoes: String(ag.observacoes || ''),
+        status: String(ag.status || 'agendado'),
+        servico_nome: ag.servico_nome ? String(ag.servico_nome) : undefined,
+        valor_total:
+          ag.valor_total != null ? Number(ag.valor_total) : undefined,
+        placa_veiculo: String(
+          ag.placa_veiculo || ag.veiculo_placa || ag.placa || ''
+        ),
+        modelo: String(
+          ag.modelo || ag.modelo_veiculo_nome || ag.modelo_veiculo || ''
+        ),
+        marca: ag.marca ? String(ag.marca) : undefined,
+        cor: ag.cor ? String(ag.cor) : undefined,
+        tipo_veiculo: ag.tipo_veiculo ? String(ag.tipo_veiculo) : undefined,
+      }))
+
+      setAgendamentos(normalizedAgendamentos)
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Erro ao carregar agendamentos'
+      setError(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isAuthenticated && isAdmin && !authLoading) {
+      fetchAgendamentos()
+    }
+  }, [isAuthenticated, isAdmin, authLoading, retryCount])
+
+  const getServicoNome = (ag: Agendamento): string => {
+    if (ag.servico_nome) return ag.servico_nome
+    const servicos: { [key: number]: string } = {
+      1: 'Lavagem Externa',
+      2: 'Lavagem Interna',
+      3: 'Lavagem Completa',
+    }
+    return servicos[ag.servico_id] || 'Servico'
+  }
+
+  const getValor = (ag: Agendamento): number => {
+    if (ag.valor_total) return ag.valor_total
+    const valores: { [key: number]: number } = { 1: 40, 2: 50, 3: 80 }
+    return valores[ag.servico_id] || 0
+  }
+
+  const formatPlaca = (placa: string): string => {
+    if (!placa) return 'Nao informada'
+    const clean = placa.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    if (clean.length <= 3) return clean
+    if (clean.length <= 7) return `${clean.slice(0, 3)}-${clean.slice(3)}`
+    return `${clean.slice(0, 3)}-${clean.slice(3, 7)}`
+  }
+
+  const formatTelefone = (telefone: string): string => {
+    if (!telefone || telefone.trim() === '') return 'Nao informado'
+    try {
+      const digits = telefone.replace(/\D/g, '').slice(0, 11)
+      if (digits.length <= 2) return `(${digits}`
+      if (digits.length <= 6)
+        return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+      if (digits.length <= 10)
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(
+          6
+        )}`
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+    } catch {
+      // Ignorar erro de formatação
+      return telefone || 'Nao informado'
+    }
+  }
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr)
+      return date.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    } catch {
+      // Ignorar erro de formatação
+      return dateStr
+    }
+  }
+
+  const formatHorario = (horario: string): string => {
+    if (!horario) return '--:--'
+    const parts = horario.split(':')
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`
+    }
+    return horario
+  }
+
+  const handleCancelBooking = async (id: number) => {
+    if (!confirm('Tem certeza que deseja cancelar este agendamento?')) {
+      return
+    }
+
+    setCancelingId(id)
+
+    try {
+      const token = localStorage.getItem('authToken')
+      if (!token) {
+        alert('Sessao expirada')
+        setCancelingId(null)
+        return
+      }
+
+      const userData = localStorage.getItem('user')
+      let isUserAdmin = false
+      if (userData) {
+        try {
+          const user = JSON.parse(userData)
+          isUserAdmin =
+            user &&
+            (user.email === 'admin@gmail.com' ||
+              user.email === 'admin@lustro.com' ||
+              user.role === 'admin')
+        } catch {
+          // Ignorar erro de parse
+        }
+      }
+
+      const endpoints = isUserAdmin
+        ? [
+            `https://lustro-black.vercel.app/api/agendamentos/${id}`,
+            `https://lustro-black.vercel.app/api/admin/dashboard/agendamentos/${id}`,
+          ]
+        : [`https://lustro-black.vercel.app/api/agendamentos/${id}`]
+
+      let response: Response | null = null
+      let lastError = ''
+
+      for (const endpoint of endpoints) {
+        try {
+          response = await fetch(endpoint, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          })
+
+          if (response.ok) {
+            break
+          } else {
+            lastError = `Erro ${response.status}: ${response.statusText}`
+
+            if (response.status === 400) {
+              const errorData = await response.json().catch(() => ({}))
+              if (
+                errorData.error &&
+                (errorData.error.includes('cancelado') ||
+                  errorData.error.includes('concluído'))
+              ) {
+                setAgendamentos((prev) => prev.filter((ag) => ag.id !== id))
+                alert('Este agendamento já foi cancelado ou concluído.')
+                setCancelingId(null)
+                return
+              }
+            }
+
+            if (endpoint === endpoints[0] && endpoints.length > 1) {
+              continue
+            } else {
+              break
+            }
+          }
+        } catch (err) {
+          lastError = err instanceof Error ? err.message : 'Erro desconhecido'
+          if (endpoint === endpoints[0] && endpoints.length > 1) {
+            continue
+          }
+        }
+      }
+
+      if (!response) {
+        const errorMsg = lastError || 'Nenhuma resposta recebida'
+        throw new Error(errorMsg)
+      }
+
+      if (response.ok) {
+        setAgendamentos((prev) => prev.filter((ag) => ag.id !== id))
+      } else {
+        const errorText = await response.text().catch(() => 'Erro desconhecido')
+        alert(`Erro ao cancelar agendamento: ${response.status}. ${errorText}`)
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Erro desconhecido'
+      alert(`Erro ao cancelar agendamento: ${errorMessage}`)
+    } finally {
+      setCancelingId(null)
+    }
+  }
+
+  const handleRetry = () => {
+    setRetryCount((prev) => prev + 1)
+  }
+
+  const activeAgendamentos = agendamentos.filter(
+    (ag) =>
+      !['cancelado', 'concluido', 'concluído'].includes(ag.status.toLowerCase())
   )
 
-  const handleCancelAgendamento = (id: number) => {
-    setAgendamentos((prev) =>
-      prev.filter((agendamento) => agendamento.id !== id)
+  if (authLoading) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-center'>
+          <Loader className='w-12 h-12 animate-spin mx-auto mb-4 text-blue-700' />
+          <p className='text-lg'>Verificando autenticação...</p>
+        </div>
+      </div>
     )
-    setConcluidos((prev) => prev.filter((concluidoId) => concluidoId !== id))
-    setSelectedAgendamento(null)
-    console.log('Agendamento cancelado:', id)
   }
 
-  const handleMarcarConcluido = (id: number) => {
-    setConcluidos((prev) => [...prev, id])
-    console.log('Marcando agendamento como concluído:', id)
+  if (!isAuthenticated || !isAdmin) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-center'>
+          <Loader className='w-12 h-12 animate-spin mx-auto mb-4 text-blue-700' />
+          <p className='text-lg'>Redirecionando...</p>
+        </div>
+      </div>
+    )
   }
-
-  const isConcluido = (id: number) => concluidos.includes(id)
 
   return (
-    <div className='min-h-screen bg-background'>
-      <header className='border-b border-gray-300'>
+    <div className='min-h-screen bg-gray-50'>
+      <header className='border-b border-gray-300 bg-white'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-          <div className='font-heading font-bold text-2xl text-primary'>
-            Lustro Admin
-          </div>
-
-          <div className='flex items-center gap-3'>
+          <div className='flex items-center gap-4'>
             <Link to='/admin'>
               <Button variant='outline' size='sm'>
                 <ArrowLeft className='w-4 h-4 mr-2' />
                 Voltar
               </Button>
             </Link>
+            <div className='font-heading font-bold text-2xl '>
+              Lustro Admin - Agendamentos
+            </div>
+          </div>
+
+          <div className='flex items-center gap-3'>
+            <Link to='/'>
+              <Button variant='outline' size='sm'>
+                <LogOut className='w-4 h-4 mr-2' />
+                Sair
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
 
-      <div className='container mx-auto max-w-6xl px-4 py-8'>
-        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-3 sm:gap-4'>
-          <h1 className='font-heading font-bold text-2xl text-primary'>
-            Agendamentos
+      <div className='container mx-auto max-w-4xl px-4 py-12'>
+        <div className='text-center mb-12'>
+          <h1 className='font-heading font-bold text-3xl md:text-4xl  mb-4'>
+            Agendamentos dos Clientes
           </h1>
+          <p className='text-lg'>Visualize e gerencie todos os agendamentos</p>
+        </div>
 
-          <div className='flex items-center gap-4'>
-            <div className='relative'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2  w-4 h-4' />
-              <Input
-                placeholder='Buscar por placa'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className='pl-10 w-64'
-              />
+        {error && (
+          <div className='bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6'>
+            <div className='flex justify-between items-center'>
+              <span>{error}</span>
+              <Button variant='outline' size='sm' onClick={handleRetry}>
+                <RefreshCw className='w-4 h-4 mr-2' />
+                Recarregar
+              </Button>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className='grid gap-6'>
-          {filteredAgendamentos.map((agendamento) => (
-            <Card
-              key={agendamento.id}
-              className='hover:shadow-lg transition-shadow'
-            >
-              <CardContent className='p-4 sm:p-6'>
-                <div className='space-y-4'>
-                  <div className='hidden md:flex md:items-center md:justify-between'>
-                    <div className='flex-1 grid md:grid-cols-4 gap-4'>
-                      <div>
-                        <p className='font-medium text-primary text-lg'>
-                          {agendamento.cliente}
-                        </p>
-                        <p className='text-sm flex items-center gap-1 mt-1'>
-                          <Phone className='w-3 h-3 text-blue-700' />
-                          {agendamento.telefone}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className='text-sm flex items-center gap-1'>
-                          <Calendar className='w-3 h-3 text-blue-700' />
-                          {agendamento.data}
-                        </p>
-                        <p className='text-sm flex items-center gap-1 mt-1'>
-                          <Clock className='w-3 h-3 text-blue-700' />
-                          {agendamento.horario}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className='text-sm font-medium text-primary'>
-                          Lavagem {agendamento.tipoLavagem}
-                        </p>
-                        <p className='text-sm flex items-center gap-1 mt-1'>
-                          <Car className='w-3 h-3 text-blue-700' />
-                          <span className='truncate'>
-                            {agendamento.modeloCarro} - {agendamento.placa}
-                          </span>
-                        </p>
-                      </div>
-
-                      <div className='text-left'>
-                        <p className='text-lg font-bold text-primary'>
-                          R$ {agendamento.valor}
-                        </p>
-                        <Badge
-                          variant='secondary'
-                          className={
-                            isConcluido(agendamento.id)
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
-                          }
-                        >
-                          {isConcluido(agendamento.id)
-                            ? 'Concluído'
-                            : agendamento.status}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className='flex items-center gap-2 ml-4'>
-                      {!isConcluido(agendamento.id) ? (
-                        <Button
-                          variant='default'
-                          size='sm'
-                          onClick={() => handleMarcarConcluido(agendamento.id)}
-                          className='bg-green-600 hover:bg-green-700 text-white'
-                        >
-                          <Check className='w-4 h-4 mr-2' />
-                          Marcar como Concluída
-                        </Button>
-                      ) : (
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          disabled
-                          className='bg-gray-100 text-gray-500'
-                        >
-                          <Check className='w-4 h-4 mr-2' />
-                          Concluída
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className='md:hidden space-y-4'>
-                    <div className='flex items-start justify-between'>
-                      <div>
-                        <p className='font-medium text-primary text-lg leading-tight'>
-                          {agendamento.cliente}
-                        </p>
-                        <p className='text-lg font-bold text-primary mt-1'>
-                          R$ {agendamento.valor}
-                        </p>
-                      </div>
-                      <Badge
-                        variant='secondary'
-                        className={
-                          isConcluido(agendamento.id)
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-green-100 text-green-800'
-                        }
-                      >
-                        {isConcluido(agendamento.id)
-                          ? 'Concluído'
-                          : agendamento.status}
-                      </Badge>
-                    </div>
-                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-                      <div className='space-y-2'>
-                        <p className='text-sm flex items-center gap-2'>
-                          <Phone className='w-4 h-4 text-blue-700 flex-shrink-0' />
-                          <span className='truncate'>
-                            {agendamento.telefone}
-                          </span>
-                        </p>
-                        <p className='text-sm flex items-center gap-2'>
-                          <Calendar className='w-4 h-4 text-blue-700 flex-shrink-0' />
-                          {agendamento.data}
-                        </p>
-                      </div>
-
-                      <div className='space-y-2'>
-                        <p className='text-sm flex items-center gap-2'>
-                          <Clock className='w-4 h-4 text-blue-700 flex-shrink-0' />
-                          {agendamento.horario}
-                        </p>
-                        <p className='text-sm flex items-center gap-2'>
-                          <Car className='w-4 h-4 text-blue-700 flex-shrink-0' />
-                          <span className='truncate'>
-                            {agendamento.modeloCarro} - {agendamento.placa}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className='text-sm font-medium text-primary'>
-                        Lavagem {agendamento.tipoLavagem}
-                      </p>
-                    </div>
-                    <div className='pt-2'>
-                      {!isConcluido(agendamento.id) ? (
-                        <Button
-                          variant='default'
-                          size='sm'
-                          onClick={() => handleMarcarConcluido(agendamento.id)}
-                          className='w-full bg-green-600 hover:bg-green-700 text-white'
-                        >
-                          <Check className='w-4 h-4 mr-2' />
-                          Marcar como Concluída
-                        </Button>
-                      ) : (
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          disabled
-                          className='w-full bg-gray-100 text-gray-500'
-                        >
-                          <Check className='w-4 h-4 mr-2' />
-                          Concluída
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredAgendamentos.length === 0 && (
+        {loading ? (
+          <div className='text-center py-12'>
+            <Loader className='w-12 h-12 animate-spin mx-auto mb-4 text-blue-700' />
+            <p>Carregando agendamentos...</p>
+          </div>
+        ) : activeAgendamentos.length === 0 ? (
           <Card>
-            <CardContent className='p-12 text-center'>
-              <p className=''>Nenhum agendamento encontrado.</p>
+            <CardContent className='text-center py-12'>
+              <Calendar className='w-16 h-16 mx-auto mb-4 text-gray-400' />
+              <h3 className='text-xl font-semibold  mb-2'>
+                Nenhum agendamento encontrado
+              </h3>
+              <p className='mb-6 text-gray-600'>
+                Ainda nao ha agendamentos realizados pelos clientes.
+              </p>
             </CardContent>
           </Card>
+        ) : (
+          <div className='space-y-6'>
+            {activeAgendamentos.map((ag) => (
+              <Card key={ag.id} className='hover:shadow-lg transition-shadow'>
+                <CardHeader className='flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0 pb-4'>
+                  <CardTitle className='text-lg'>Agendamento</CardTitle>
+                  <div className='flex flex-row items-center gap-3'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handleCancelBooking(ag.id)}
+                      disabled={cancelingId === ag.id}
+                    >
+                      <X className='w-4 h-4 mr-1' />
+                      {cancelingId === ag.id ? 'Cancelando...' : 'Cancelar'}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className='grid md:grid-cols-2 gap-6'>
+                    <div className='space-y-3'>
+                      <div className='flex items-center gap-2'>
+                        <Calendar className='w-4 h-4 text-blue-700' />
+                        <span className='font-medium'>Data:</span>
+                        <span>{formatDate(ag.data_agendamento)}</span>
+                      </div>
+                      <div className='flex items-center gap-2'>
+                        <Clock className='w-4 h-4 text-blue-700' />
+                        <span className='font-medium'>Horario:</span>
+                        <span>{formatHorario(ag.horario_agendamento)}</span>
+                      </div>
+                      <div className='flex items-center gap-2'>
+                        <Car className='w-4 h-4 text-blue-700' />
+                        <span className='font-medium'>Servico:</span>
+                        <span>{getServicoNome(ag)}</span>
+                      </div>
+                    </div>
+                    <div className='space-y-3'>
+                      <div className='flex items-center gap-2'>
+                        <CarFront className='w-4 h-4 text-blue-700' />
+                        <span className='font-medium'>Veiculo:</span>
+                        <span>
+                          {ag.modelo_veiculo_nome ||
+                            ag.modelo ||
+                            'Nao informado'}
+                        </span>
+                      </div>
+                      <div className='flex items-center gap-2'>
+                        <LayoutTemplate className='w-4 h-4 text-blue-700' />
+                        <span className='font-medium'>Placa:</span>
+                        <span>
+                          {formatPlaca(
+                            ag.veiculo_placa || ag.placa_veiculo || ''
+                          )}
+                        </span>
+                      </div>
+                      <div className='flex items-center gap-2'>
+                        <Phone className='w-4 h-4 text-blue-700' />
+                        <span className='font-medium'>Telefone:</span>
+                        <span>
+                          {ag.telefone && ag.telefone.trim() !== ''
+                            ? formatTelefone(ag.telefone)
+                            : 'Nao informado'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className='border-t border-gray-300 pt-4 mt-4'>
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center gap-2'>
+                        <CreditCard className='w-4 h-4 text-blue-700' />
+                        <span className='font-medium'>Valor Total:</span>
+                      </div>
+                      <span className='text-xl font-bold text-blue-700'>
+                        R$ {getValor(ag)},00
+                      </span>
+                    </div>
+                    {ag.nome_proprietario && (
+                      <div className='flex items-center gap-2 mt-2'>
+                        <span className='font-medium'>Cliente:</span>
+                        <span>{ag.nome_proprietario}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
-
-      {selectedAgendamento && (
-        <div className='fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
-          <Card className='w-full max-w-md'>
-            <CardHeader className='flex flex-row items-center justify-between'>
-              <CardTitle className='font-heading text-xl text-primary'>
-                Detalhes do Agendamento
-              </CardTitle>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={() => setSelectedAgendamento(null)}
-              >
-                <X className='w-4 h-4' />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div>
-                <p className='text-sm'>Cliente</p>
-                <p className='font-medium text-primary'>
-                  {selectedAgendamento.cliente}
-                </p>
-              </div>
-
-              <div>
-                <p className='text-sm'>Contato</p>
-                <p className='text-sm'>{selectedAgendamento.email}</p>
-                <p className='text-sm'>{selectedAgendamento.telefone}</p>
-              </div>
-
-              <div className='grid grid-cols-2 gap-4'>
-                <div>
-                  <p className='text-sm '>Data</p>
-                  <p className='font-medium'>{selectedAgendamento.data}</p>
-                </div>
-                <div>
-                  <p className='text-sm '>Horário</p>
-                  <p className='font-medium'>{selectedAgendamento.horario}</p>
-                </div>
-              </div>
-
-              <div className='grid grid-cols-2 gap-4'>
-                <div>
-                  <p className='text-sm '>Veículo</p>
-                  <p className='font-medium'>
-                    {selectedAgendamento.modeloCarro}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm '>Placa</p>
-                  <p className='font-medium'>{selectedAgendamento.placa}</p>
-                </div>
-              </div>
-
-              <div>
-                <p className='text-sm '>Valor</p>
-                <p className='text-lg font-bold text-primary'>
-                  R$ {selectedAgendamento.valor}
-                </p>
-              </div>
-
-              <div className='flex gap-2 pt-4'>
-                <Button
-                  variant='outline'
-                  className='flex-1 bg-transparent'
-                  onClick={() => setSelectedAgendamento(null)}
-                >
-                  Fechar
-                </Button>
-
-                <Button
-                  variant='destructive'
-                  className='flex-1'
-                  onClick={() =>
-                    handleCancelAgendamento(selectedAgendamento.id)
-                  }
-                >
-                  Cancelar agendamento
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   )
 }
