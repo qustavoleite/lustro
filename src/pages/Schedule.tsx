@@ -1,14 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card'
 import { Label } from '../components/Label'
 import { Select, SelectItem } from '../components/Select'
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup'
-import { Link } from 'react-router-dom'
-import { Calendar, User, LogOut } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Calendar, User, LogOut, Loader } from 'lucide-react'
+
+interface ModeloVeiculo {
+  id: number
+  nome: string
+  tipo: string
+}
 
 export function Schedule() {
+  const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [washType, setWashType] = useState('')
@@ -17,6 +24,78 @@ export function Schedule() {
   const [phone, setPhone] = useState('')
   const [carOwner, setCarOwner] = useState('')
   const [showSummary, setShowSummary] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [authToken, setAuthToken] = useState<string | null>(null)
+  const [modelosVeiculo, setModelosVeiculo] = useState<ModeloVeiculo[]>([])
+  const [loadingModelos, setLoadingModelos] = useState(true)
+  const [errorModelos, setErrorModelos] = useState('')
+
+  const serviceMap = {
+    externa: 1,
+    interna: 2,
+    completa: 3,
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    setAuthToken(token)
+  }, [])
+
+  useEffect(() => {
+    const fetchModelosVeiculo = async () => {
+      try {
+        setLoadingModelos(true)
+        setErrorModelos('')
+
+        const response = await fetch(
+          'https://lustro-black.vercel.app/api/modelos-veiculo',
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error(`Erro ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+
+        let modelos = null
+
+        if (Array.isArray(data)) {
+          modelos = data
+        } else if (data.data && Array.isArray(data.data)) {
+          modelos = data.data
+        } else if (data.modelos && Array.isArray(data.modelos)) {
+          modelos = data.modelos
+        } else if (data.results && Array.isArray(data.results)) {
+          modelos = data.results
+        }
+
+        if (!modelos || modelos.length === 0) {
+          throw new Error(
+            'Nenhum modelo de veículo encontrado na resposta da API'
+          )
+        }
+
+        setModelosVeiculo(modelos)
+      } catch (err) {
+        setErrorModelos(
+          err instanceof Error
+            ? err.message
+            : 'Erro ao carregar modelos de veículo da API.'
+        )
+        setModelosVeiculo([])
+      } finally {
+        setLoadingModelos(false)
+      }
+    }
+
+    fetchModelosVeiculo()
+  }, [])
 
   const prices = {
     externa: 40,
@@ -24,14 +103,39 @@ export function Schedule() {
     completa: 80,
   }
 
-  const getUnavailableTimes = (date: string) => {
-    // logica mockada
-    const unavailable: { [key: string]: string[] } = {
-      '2024-01-15': ['09:00', '14:00'],
-      '2024-01-16': ['10:00', '15:00', '16:00'],
-      '2024-01-17': ['08:00', '11:00'],
-    }
-    return unavailable[date] || []
+  const formatPlate = (value: string) => {
+    const cleaned = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    if (cleaned.length <= 3) return cleaned
+    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}`
+  }
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 2) return `(${digits}`
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+    if (digits.length <= 10)
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(
+      7,
+      11
+    )}`
+  }
+
+  const getUnavailableTimes = (date: string): string[] => {
+    void date
+    return []
+  }
+
+  const isTimeAvailable = (date: string, time: string) => {
+    const selectedDateTime = new Date(`${date}T${time}`)
+    const dayOfWeek = selectedDateTime.getDay()
+    const hour = parseInt(time.split(':')[0])
+
+    if (dayOfWeek === 0) return false
+    if (hour < 8 || hour >= 18) return false
+
+    return true
   }
 
   const timeSlots = [
@@ -53,76 +157,104 @@ export function Schedule() {
   }
 
   const handleConfirmBooking = () => {
-    if (
-      selectedDate &&
-      selectedTime &&
-      washType &&
-      carModel &&
-      carOwner &&
-      plate &&
-      phone
-    ) {
-      setShowSummary(true)
+    if (!authToken) {
+      alert(
+        'Você precisa estar logado para fazer um agendamento. Redirecionando para login...'
+      )
+      navigate('/login')
+      return
     }
+
+    const errors = []
+    if (!selectedDate) errors.push('Data é obrigatória')
+    if (!selectedTime) errors.push('Horário é obrigatório')
+    if (!washType) errors.push('Tipo de lavagem é obrigatório')
+    if (!carModel) errors.push('Modelo do carro é obrigatório')
+    if (!carOwner.trim()) errors.push('Proprietário é obrigatório')
+    if (!plate.trim()) errors.push('Placa é obrigatória')
+    if (phone.replace(/\D/g, '').length < 10)
+      errors.push('Telefone é obrigatório')
+
+    if (selectedDate) {
+      const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`)
+      const dayOfWeek = selectedDateTime.getDay()
+      if (dayOfWeek === 0) {
+        errors.push('Não funcionamos aos domingos')
+      }
+    }
+
+    if (errors.length > 0) {
+      alert(`Por favor, corrija os seguintes campos:\n${errors.join('\n')}`)
+      return
+    }
+
+    setShowSummary(true)
   }
 
-  const handleFinalizeBooking = () => {
-    let existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]')
-    const hasLegacyIds = existingBookings.some(
-      (b: { id: number }) => Number(b?.id) >= 1000000
-    )
-    if (hasLegacyIds) {
-      const renumbered = [...existingBookings]
-        .sort((a: any, b: any) => {
-          const dateCmp = String(a.date).localeCompare(String(b.date))
-          if (dateCmp !== 0) return dateCmp
-          return String(a.time).localeCompare(String(b.time))
-        })
-        .map((b: any, idx: number) => ({ ...b, id: idx + 1 }))
-      localStorage.setItem('bookings', JSON.stringify(renumbered))
-      localStorage.setItem('bookingCounter', String(renumbered.length))
-      existingBookings = renumbered
+  const handleFinalizeBooking = async () => {
+    setIsProcessing(true)
+
+    try {
+      if (!authToken) {
+        alert('Sessão expirada. Faça login novamente.')
+        navigate('/login')
+        return
+      }
+
+      const modeloSelecionado = modelosVeiculo.find(
+        (modelo) => modelo.id === parseInt(carModel)
+      )
+      const tipoVeiculo = modeloSelecionado?.tipo || carModel
+
+      const dataAgendamento = selectedDate
+      const servicoId = serviceMap[washType as keyof typeof serviceMap]
+
+      const backendPayload = {
+        data_agendamento: dataAgendamento,
+        horario_agendamento: selectedTime,
+        servico_id: servicoId,
+        placa_veiculo: plate.replace('-', '').toUpperCase(),
+        placa: plate.replace('-', '').toUpperCase(),
+        tipo_veiculo: tipoVeiculo,
+        modelo_veiculo: modeloSelecionado?.nome || carModel,
+        modelo_veiculo_id: modeloSelecionado?.id || parseInt(carModel),
+        nome_proprietario: carOwner,
+        telefone: phone.replace(/\D/g, ''),
+        observacoes: `Proprietário: ${carOwner}`,
+      }
+
+      const response = await fetch(
+        'https://lustro-black.vercel.app/api/agendamentos',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(backendPayload),
+        }
+      )
+
+      if (response.ok) {
+        await response.json()
+        navigate('/scheduling')
+      } else {
+        const detail = await response.text().catch(() => '')
+        throw new Error(
+          `Falha ao agendar no servidor (HTTP ${response.status}). ${
+            detail || ''
+          }`
+        )
+      }
+    } catch (error) {
+      alert(
+        `Erro ao realizar agendamento: ${
+          error instanceof Error ? error.message : 'Tente novamente.'
+        }`
+      )
+    } finally {
+      setIsProcessing(false)
     }
-    const COUNTER_KEY = 'bookingCounter'
-    let counter = parseInt(localStorage.getItem(COUNTER_KEY) || '0', 10)
-    if (!Number.isFinite(counter) || counter < 0)
-      counter = existingBookings.length
-    const nextId = counter + 1
-    localStorage.setItem(COUNTER_KEY, String(nextId))
-
-    const normalizedDate = selectedDate.includes('-')
-      ? selectedDate
-      : new Date(selectedDate).toISOString().split('T')[0]
-
-    const newBooking = {
-      id: nextId,
-      date: normalizedDate,
-      time: selectedTime,
-      washType: washType,
-      carModel: carModel,
-      carOwner: carOwner,
-      plate: plate,
-      phone: phone,
-      price: calculatePrice(),
-      status: 'agendado',
-    }
-
-    const updatedBookings = [...existingBookings, newBooking]
-
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings))
-
-    alert('Agendamento realizado com sucesso!')
-
-    setSelectedDate('')
-    setSelectedTime('')
-    setWashType('')
-    setCarModel('')
-    setCarOwner('')
-    setPlate('')
-    setPhone('')
-    setShowSummary(false)
-
-    window.location.href = '/scheduling'
   }
 
   const formatDateForDisplay = (dateString: string) => {
@@ -145,33 +277,26 @@ export function Schedule() {
     return `${year}-${month}-${day}`
   }
 
-  const formatPhone = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11)
-    if (digits.length <= 2) return `(${digits}`
-    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-    if (digits.length <= 10)
-      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(
-      7,
-      11
-    )}`
-  }
-
   const isFormComplete =
     !!selectedDate &&
     !!selectedTime &&
     !!washType &&
     !!carModel &&
-    !!carOwner &&
-    !!plate &&
-    !!phone
+    !!carOwner.trim() &&
+    !!plate.trim() &&
+    phone.replace(/\D/g, '').length >= 10
 
   if (showSummary) {
+    const modeloSelecionado = modelosVeiculo.find(
+      (modelo) => modelo.id === parseInt(carModel)
+    )
+    const nomeModelo = modeloSelecionado?.nome || carModel
+
     return (
       <div className='min-h-screen bg-background'>
         <header className='border-b border-gray-300'>
           <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-            <div className='font-heading font-bold text-2xl text-primary'>
+            <div className='font-heading font-bold text-2xl'>
               Lustro
             </div>
             <div className='flex items-center gap-4'>
@@ -216,7 +341,7 @@ export function Schedule() {
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Modelo do Carro</Label>
-                  <p className='font-medium capitalize'>{carModel}</p>
+                  <p className='font-medium capitalize'>{nomeModelo}</p>
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Proprietário</Label>
@@ -224,7 +349,7 @@ export function Schedule() {
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Placa</Label>
-                  <p className='font-medium'>{plate}</p>
+                  <p className='font-medium'>{plate.toUpperCase()}</p>
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Telefone</Label>
@@ -246,14 +371,16 @@ export function Schedule() {
                   variant='secondary'
                   className='flex-1 bg-transparent'
                   onClick={() => setShowSummary(false)}
+                  disabled={isProcessing}
                 >
                   Voltar
                 </Button>
                 <Button
                   className='flex-1 bg-blue-700 hover:bg-accent/90'
                   onClick={handleFinalizeBooking}
+                  disabled={isProcessing}
                 >
-                  Confirmar
+                  {isProcessing ? 'Processando...' : 'Confirmar'}
                 </Button>
               </div>
             </CardContent>
@@ -267,7 +394,7 @@ export function Schedule() {
     <div className='min-h-screen bg-background'>
       <header className='border-b border-gray-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-          <div className='font-heading font-bold text-2xl text-primary'>
+          <div className='font-heading font-bold text-2xl'>
             Lustro
           </div>
           <div className='flex items-center gap-4'>
@@ -289,7 +416,7 @@ export function Schedule() {
 
       <div className='container mx-auto max-w-4xl px-4 py-12'>
         <div className='text-center mb-12'>
-          <h1 className='font-heading font-bold text-3xl md:text-4xl text-primary mb-4'>
+          <h1 className='font-heading font-bold text-3xl md:text-4xl mb-4'>
             Agendar Lavagem
           </h1>
           <p className='text-lg'>
@@ -317,7 +444,16 @@ export function Schedule() {
                     value={selectedDate}
                     onChange={(e) => {
                       const inputValue = e.target.value
-                      console.log('Data selecionada:', inputValue)
+                      const selectedDateObj = new Date(inputValue + 'T00:00:00')
+                      const isSunday = selectedDateObj.getDay() === 0
+
+                      if (isSunday) {
+                        alert(
+                          'Não funcionamos aos domingos. Por favor, escolha outro dia.'
+                        )
+                        return
+                      }
+
                       setSelectedDate(inputValue)
                       setSelectedTime('')
                     }}
@@ -336,7 +472,9 @@ export function Schedule() {
                     <div className='grid grid-cols-4 gap-2 mt-2'>
                       {timeSlots.map((time) => {
                         const isUnavailable =
-                          getUnavailableTimes(selectedDate).includes(time)
+                          getUnavailableTimes(selectedDate).includes(time) ||
+                          !isTimeAvailable(selectedDate, time)
+
                         return (
                           <Button
                             key={time}
@@ -349,7 +487,7 @@ export function Schedule() {
                             className={`
                               ${
                                 selectedTime === time
-                                  ? 'bg-blue-700 hover:bg-accent/90'
+                                  ? 'bg-blue-700 hover:bg-accent/90 text-white'
                                   : ''
                               }
                               ${
@@ -365,8 +503,8 @@ export function Schedule() {
                       })}
                     </div>
                     {getUnavailableTimes(selectedDate).length > 0 && (
-                      <p className='text-xs mt-2'>
-                        Horários em cinza não estão disponíveis
+                      <p className='text-xs mt-2 text-gray-600'>
+                        * Horários em cinza não estão disponíveis
                       </p>
                     )}
                   </div>
@@ -392,7 +530,6 @@ export function Schedule() {
                       htmlFor='interna'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      {/* <Sparkles className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Interna</p>
@@ -400,7 +537,9 @@ export function Schedule() {
                             R$ 50
                           </span>
                         </div>
-                        <p className=''>Interior limpo e higienizado</p>
+                        <p className='text-sm text-gray-600'>
+                          Interior limpo e higienizado
+                        </p>
                       </div>
                     </Label>
                   </div>
@@ -417,7 +556,6 @@ export function Schedule() {
                       htmlFor='externa'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      {/* <Car className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Externa</p>
@@ -425,7 +563,9 @@ export function Schedule() {
                             R$ 40
                           </span>
                         </div>
-                        <p className=''>Remova a sujeira e recupere o brilho</p>
+                        <p className='text-sm text-gray-600'>
+                          Remova a sujeira e recupere o brilho
+                        </p>
                       </div>
                     </Label>
                   </div>
@@ -442,7 +582,6 @@ export function Schedule() {
                       htmlFor='completa'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      {/* <Shield className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Completa</p>
@@ -450,7 +589,9 @@ export function Schedule() {
                             R$ 80
                           </span>
                         </div>
-                        <p className=''>Cuidado total por dentro e por fora</p>
+                        <p className='text-sm text-gray-600'>
+                          Cuidado total por dentro e por fora
+                        </p>
                       </div>
                     </Label>
                   </div>
@@ -484,7 +625,8 @@ export function Schedule() {
                     id='plate'
                     placeholder='ABC-1234'
                     value={plate}
-                    onChange={(e) => setPlate(e.target.value)}
+                    onChange={(e) => setPlate(formatPlate(e.target.value))}
+                    maxLength={8}
                   />
                 </div>
                 <div>
@@ -496,6 +638,7 @@ export function Schedule() {
                     placeholder='(11) 99999-9999'
                     value={phone}
                     onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    maxLength={15}
                   />
                 </div>
               </CardContent>
@@ -510,20 +653,45 @@ export function Schedule() {
                   <Label htmlFor='carModel' className='mb-2'>
                     Selecione o modelo do seu carro
                   </Label>
-                  <Select
-                    value={carModel}
-                    onChange={setCarModel}
-                    placeholder='Escolha o modelo'
-                  >
-                    <SelectItem value='sedan'>Sedan</SelectItem>
-                    <SelectItem value='hatch'>Hatch</SelectItem>
-                    <SelectItem value='suv'>SUV</SelectItem>
-                    <SelectItem value='pickup'>Pickup</SelectItem>
-                    <SelectItem value='van'>Van</SelectItem>
-                    <SelectItem value='coupe'>Coupé</SelectItem>
-                    <SelectItem value='conversivel'>Conversível</SelectItem>
-                    <SelectItem value='wagon'>Station Wagon</SelectItem>
-                  </Select>
+
+                  {loadingModelos ? (
+                    <div className='flex items-center justify-center py-4'>
+                      <Loader className='w-5 h-5 animate-spin mr-2' />
+                      <span>Carregando modelos da API...</span>
+                    </div>
+                  ) : errorModelos ? (
+                    <div className='bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm'>
+                      <p className='font-semibold mb-1'>
+                        Erro ao carregar modelos
+                      </p>
+                      <p>{errorModelos}</p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className='mt-2 text-xs underline hover:no-underline'
+                      >
+                        Tentar novamente
+                      </button>
+                    </div>
+                  ) : modelosVeiculo.length === 0 ? (
+                    <div className='bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-md text-sm'>
+                      Nenhum modelo disponível no momento.
+                    </div>
+                  ) : (
+                    <Select
+                      value={carModel}
+                      onChange={setCarModel}
+                      placeholder='Escolha o modelo'
+                    >
+                      {modelosVeiculo.map((modelo) => (
+                        <SelectItem
+                          key={modelo.id}
+                          value={modelo.id.toString()}
+                        >
+                          {modelo.nome}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -534,9 +702,9 @@ export function Schedule() {
           <Button
             className='bg-blue-700 hover:bg-accent/90 text-lg py-6 px-12'
             onClick={handleConfirmBooking}
-            disabled={!isFormComplete}
+            disabled={!isFormComplete || loadingModelos}
           >
-            Revisar Agendamento
+            {loadingModelos ? 'Carregando...' : 'Revisar Agendamento'}
           </Button>
         </div>
       </div>
