@@ -48,39 +48,72 @@ export function SignUp() {
         confirmar_senha: formData.confirmarSenha,
       }
 
-      console.log('Enviando dados:', payload)
-
-      const response = await fetch(
-        'https://lustro-black.vercel.app/api/users',
-        {
+      let response
+      try {
+        response = await fetch('https://lustro-black.vercel.app/api/users', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
+        })
+      } catch (fetchError) {
+        if (fetchError instanceof TypeError) {
+          if (fetchError.message.includes('Failed to fetch')) {
+            throw new Error(
+              'Erro de conexão com o servidor. O backend pode estar bloqueando requisições do frontend (CORS). Verifique se o backend está configurado corretamente.'
+            )
+          }
+          throw new Error(
+            'Erro de conexão. Verifique sua internet e tente novamente.'
+          )
         }
-      )
+        throw fetchError
+      }
 
-      console.log('Status da resposta:', response.status)
+      const contentType = response.headers.get('content-type')
+      const isJson = contentType && contentType.includes('application/json')
 
-      const data = await response.json()
-      console.log('Resposta da API:', data)
+      let data
+      if (isJson) {
+        data = await response.json()
+      } else {
+        const text = await response.text()
+        if (!response.ok) {
+          throw new Error(
+            text || `Erro ${response.status}: ${response.statusText}`
+          )
+        }
+        throw new Error('Resposta do servidor não é JSON válido')
+      }
 
       if (!response.ok) {
         const errorMessage =
-          data.error || data.message || data.msg || 'Erro ao criar conta'
+          data?.error ||
+          data?.message ||
+          data?.msg ||
+          `Erro ${response.status}: Erro ao criar conta`
         throw new Error(errorMessage)
       }
 
-      console.log('Cadastro realizado com sucesso:', data)
-      alert('Cadastro realizado com sucesso!')
-      navigate('/schedule')
+      if (data.access_token || data.token) {
+        const token = data.access_token || data.token
+        localStorage.setItem('authToken', token)
+
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user))
+        }
+
+        navigate('/schedule')
+      } else {
+        alert('Cadastro realizado com sucesso! Faça login para continuar.')
+        navigate('/login')
+      }
     } catch (err) {
-      console.error('Erro no cadastro:', err)
       setError(
         err instanceof Error
           ? err.message
-          : 'Erro ao criar conta. Tente novamente.'
+          : 'Erro ao criar conta. Verifique sua conexão e tente novamente.'
       )
     } finally {
       setIsLoading(false)
