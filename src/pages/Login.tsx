@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Eye, EyeOff } from 'lucide-react'
+import { API_BASE_URL } from '../config/api'
 
 export function Login() {
   const navigate = useNavigate()
@@ -24,9 +25,9 @@ export function Login() {
       }
 
       const isAdmin = payload.email === 'admin@lustro.com'
-      const endpoint = isAdmin
-        ? 'https://lustro-black.vercel.app/api/auth/admin/login'
-        : 'https://lustro-black.vercel.app/api/auth/login'
+      const adminEndpoint = `${API_BASE_URL}/auth/admin/login`
+      const userEndpoint = `${API_BASE_URL}/auth/login`
+      const endpoint = isAdmin ? adminEndpoint : userEndpoint
 
       let response
       try {
@@ -86,7 +87,7 @@ export function Login() {
         localStorage.setItem('user', JSON.stringify(data.user))
       }
 
-      if (endpoint === 'https://lustro-black.vercel.app/api/auth/admin/login') {
+      if (isAdmin) {
         navigate('/admin')
       } else {
         navigate('/schedule')

@@ -7,6 +7,7 @@ import { Select, SelectItem } from '../components/Select'
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup'
 import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, User, LogOut, Loader } from 'lucide-react'
+import { API_BASE_URL } from '../config/api'
 
 interface ModeloVeiculo {
   id: number
@@ -47,15 +48,12 @@ export function Schedule() {
         setLoadingModelos(true)
         setErrorModelos('')
 
-        const response = await fetch(
-          'https://lustro-black.vercel.app/api/modelos-veiculo',
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
-        )
+        const response = await fetch(`${API_BASE_URL}/modelos-veiculo`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
 
         if (!response.ok) {
           throw new Error(`Erro ${response.status}: ${response.statusText}`)
@@ -223,17 +221,14 @@ export function Schedule() {
         observacoes: `Proprietário: ${carOwner}`,
       }
 
-      const response = await fetch(
-        'https://lustro-black.vercel.app/api/agendamentos',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify(backendPayload),
-        }
-      )
+      const response = await fetch(`${API_BASE_URL}/agendamentos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(backendPayload),
+      })
 
       if (response.ok) {
         await response.json()
@@ -296,9 +291,7 @@ export function Schedule() {
       <div className='min-h-screen bg-background'>
         <header className='border-b border-gray-300'>
           <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-            <div className='font-heading font-bold text-2xl'>
-              Lustro
-            </div>
+            <div className='font-heading font-bold text-2xl'>Lustro</div>
             <div className='flex items-center gap-4'>
               <Link to='/scheduling'>
                 <Button variant='secondary' size='sm'>
@@ -394,9 +387,7 @@ export function Schedule() {
     <div className='min-h-screen bg-background'>
       <header className='border-b border-gray-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-          <div className='font-heading font-bold text-2xl'>
-            Lustro
-          </div>
+          <div className='font-heading font-bold text-2xl'>Lustro</div>
           <div className='flex items-center gap-4'>
             <Link to='/scheduling'>
               <Button variant='secondary' size='sm'>

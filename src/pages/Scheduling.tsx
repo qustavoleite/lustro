@@ -17,6 +17,7 @@ import {
   Loader,
   RefreshCw,
 } from 'lucide-react'
+import { API_BASE_URL } from '../config/api'
 
 interface Agendamento {
   id: number
@@ -54,16 +55,13 @@ export function Scheduling() {
         return
       }
 
-      const response = await fetch(
-        'https://lustro-black.vercel.app/api/agendamentos',
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      )
+      const response = await fetch(`${API_BASE_URL}/agendamentos`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
       if (response.ok) {
         const data = await response.json()
@@ -95,16 +93,13 @@ export function Scheduling() {
         return
       }
 
-      const response = await fetch(
-        `https://lustro-black.vercel.app/api/agendamentos/${id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      )
+      const response = await fetch(`${API_BASE_URL}/agendamentos/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
       if (response.ok) {
         setAgendamentos((prev) => prev.filter((ag) => ag.id !== id))
@@ -160,8 +155,12 @@ export function Scheduling() {
   }
 
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'Data não informada'
+
     try {
-      const date = new Date(dateStr)
+      const [year, month, day] = dateStr.split('-').map(Number)
+      const date = new Date(year, month - 1, day)
+
       return date.toLocaleDateString('pt-BR', {
         weekday: 'long',
         year: 'numeric',

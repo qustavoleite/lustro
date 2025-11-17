@@ -17,6 +17,7 @@ import {
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { API_BASE_URL } from '../config/api'
 
 interface Agendamento {
   id: number
@@ -93,10 +94,10 @@ export function AdminSchedules() {
 
       const endpoints = isUserAdmin
         ? [
-            'https://lustro-black.vercel.app/api/admin/dashboard/agendamentos',
-            'https://lustro-black.vercel.app/api/agendamentos',
+            `${API_BASE_URL}/admin/dashboard/agendamentos`,
+            `${API_BASE_URL}/agendamentos`,
           ]
-        : ['https://lustro-black.vercel.app/api/agendamentos']
+        : [`${API_BASE_URL}/agendamentos`]
 
       let agendamentosArray: unknown[] = []
       let lastError = ''
@@ -269,8 +270,12 @@ export function AdminSchedules() {
   }
 
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'Data não informada'
+
     try {
-      const date = new Date(dateStr)
+      const [year, month, day] = dateStr.split('-').map(Number)
+      const date = new Date(year, month - 1, day)
+
       return date.toLocaleDateString('pt-BR', {
         weekday: 'long',
         year: 'numeric',
@@ -324,10 +329,10 @@ export function AdminSchedules() {
 
       const endpoints = isUserAdmin
         ? [
-            `https://lustro-black.vercel.app/api/agendamentos/${id}`,
-            `https://lustro-black.vercel.app/api/admin/dashboard/agendamentos/${id}`,
+            `${API_BASE_URL}/agendamentos/${id}`,
+            `${API_BASE_URL}/admin/dashboard/agendamentos/${id}`,
           ]
-        : [`https://lustro-black.vercel.app/api/agendamentos/${id}`]
+        : [`${API_BASE_URL}/agendamentos/${id}`]
 
       let response: Response | null = null
       let lastError = ''

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/Card'
 import { Calendar, Clock, LogOut, Loader } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { API_BASE_URL } from '../config/api'
 
 interface Agendamento {
   id: number
@@ -62,8 +63,8 @@ export function Admin() {
         }
 
         const endpoints = [
-          'https://lustro-black.vercel.app/api/admin/agendamentos/hoje',
-          'https://lustro-black.vercel.app/api/agendamentos/hoje',
+          `${API_BASE_URL}/admin/agendamentos/hoje`,
+          `${API_BASE_URL}/agendamentos/hoje`,
         ]
 
         let agendamentosDeHoje: Agendamento[] = []

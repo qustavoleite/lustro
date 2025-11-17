@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Eye, EyeOff } from 'lucide-react'
+import { API_BASE_URL } from '../config/api'
 
 export function SignUp() {
   const navigate = useNavigate()
@@ -50,7 +51,7 @@ export function SignUp() {
 
       let response
       try {
-        response = await fetch('https://lustro-black.vercel.app/api/users', {
+        response = await fetch(`${API_BASE_URL}/users`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
