@@ -9,15 +9,18 @@ import { logout } from '../utils/auth'
 interface Agendamento {
   id: number
   data_agendamento: string
+  horario_agendamento?: string
   servico_id: number
   placa_veiculo: string
   tipo_veiculo: string
   marca: string
   modelo: string
-  cor: string
+  cor?: string
   telefone: string
   observacoes: string
   status: string
+  cliente_nome?: string
+  nome_proprietario?: string
 }
 
 export function Admin() {
@@ -63,149 +66,161 @@ export function Admin() {
           return
         }
 
-        const endpoints = [
-          `${API_BASE_URL}/admin/agendamentos/hoje`,
-          `${API_BASE_URL}/agendamentos/hoje`,
-        ]
+        const endpoint = `${API_BASE_URL}/admin/dashboard/agendamentos-hoje`
 
         let agendamentosDeHoje: Agendamento[] = []
         let hasError = false
 
-        for (const endpoint of endpoints) {
-          try {
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => {
-              controller.abort()
-            }, 8000)
+        try {
+          const fetchOptions: RequestInit = {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            mode: 'cors',
+            credentials: 'omit',
+          }
 
-            const fetchOptions: RequestInit = {
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-              },
-              signal: controller.signal,
-              mode: 'cors',
-              credentials: 'omit',
+          const response = await fetch(endpoint, fetchOptions)
+
+          if (response.ok) {
+            const data = await response.json()
+
+            let agendamentos: Agendamento[] = []
+
+            if (Array.isArray(data)) {
+              agendamentos = data
+            } else if (
+              data.agendamentos &&
+              Array.isArray(data.agendamentos)
+            ) {
+              agendamentos = data.agendamentos
+            } else if (data.data && Array.isArray(data.data)) {
+              agendamentos = data.data
+            } else if (data.results && Array.isArray(data.results)) {
+              agendamentos = data.results
+            } else {
+              const arrays = Object.values(data).filter((value) =>
+                Array.isArray(value)
+              )
+              if (arrays.length > 0) {
+                agendamentos = arrays[0]
+              }
             }
 
-            const response = await fetch(endpoint, fetchOptions)
-            clearTimeout(timeoutId)
-
-            if (response.ok) {
-              const data = await response.json()
-
-              let agendamentos: Agendamento[] = []
-
-              if (Array.isArray(data)) {
-                agendamentos = data
-              } else if (
-                data.agendamentos &&
-                Array.isArray(data.agendamentos)
-              ) {
-                agendamentos = data.agendamentos
-              } else if (data.data && Array.isArray(data.data)) {
-                agendamentos = data.data
-              } else if (data.results && Array.isArray(data.results)) {
-                agendamentos = data.results
-              } else {
-                const arrays = Object.values(data).filter((value) =>
-                  Array.isArray(value)
-                )
-                if (arrays.length > 0) {
-                  agendamentos = arrays[0]
-                }
-              }
-
-              const normalizedAgendamentos: Agendamento[] = (
-                agendamentos as Record<string, unknown>[]
-              ).map((ag) => ({
+            const normalizedAgendamentos: Agendamento[] = (
+              agendamentos as Record<string, unknown>[]
+            )
+              .filter((ag) => {
+                const status = String(ag.status || '').toLowerCase().trim()
+                return !['cancelado', 'expirado'].includes(status)
+              })
+              .map((ag) => ({
                 id: Number(ag.id) || 0,
                 data_agendamento: String(ag.data_agendamento || ag.data || ''),
+                horario_agendamento: ag.horario_agendamento
+                  ? String(ag.horario_agendamento)
+                  : undefined,
                 servico_id: Number(ag.servico_id) || 0,
                 placa_veiculo: String(
-                  ag.placa_veiculo || ag.veiculo_placa || ag.placa || ''
+                  ag.veiculo_placa ||
+                    ag.placa_veiculo ||
+                    ag.placa ||
+                    ''
                 ),
                 tipo_veiculo: String(ag.tipo_veiculo || ''),
                 marca: String(ag.marca || ''),
-                modelo: String(ag.modelo || ag.modelo_veiculo || ''),
+                modelo: String(
+                  ag.modelo_veiculo_nome ||
+                    ag.modelo ||
+                    ag.modelo_veiculo ||
+                    ''
+                ),
                 telefone: String(
-                  ag.telefone ||
-                    ag.telefone_veiculo ||
-                    ag.telefone_cliente ||
+                  ag.telefone_veiculo ||
+                    ag.telefone ||
                     ag.cliente_telefone ||
+                    ag.telefone_cliente ||
                     ag.phone ||
                     ag.telefone_contato ||
                     ''
                 ),
                 observacoes: String(ag.observacoes || ''),
                 status: String(ag.status || 'agendado'),
+                cliente_nome: ag.cliente_nome ? String(ag.cliente_nome) : undefined,
+                nome_proprietario: ag.nome_proprietario
+                  ? String(ag.nome_proprietario)
+                  : undefined,
               }))
 
-              const hoje = new Date().toISOString().split('T')[0]
-              agendamentosDeHoje = normalizedAgendamentos.filter((ag) => {
-                try {
-                  if (!ag.data_agendamento) return false
-                  const dataAgendamento = new Date(ag.data_agendamento)
-                    .toISOString()
-                    .split('T')[0]
-                  return dataAgendamento === hoje
-                } catch {
-                  return false
-                }
-              })
+            agendamentosDeHoje = normalizedAgendamentos
 
-              agendamentosDeHoje.sort((a, b) => {
-                try {
-                  const dataA = new Date(a.data_agendamento).getTime()
-                  const dataB = new Date(b.data_agendamento).getTime()
-                  return dataA - dataB
-                } catch {
-                  return 0
-                }
-              })
-
-              agendamentosDeHoje = agendamentosDeHoje.slice(0, 4)
-
-              break
-            } else {
-              if (response.status === 401) {
-                setError('Token inválido ou expirado. Faça login novamente.')
-                hasError = true
-                localStorage.removeItem('authToken')
-                break
-              } else if (response.status === 403) {
-                continue
-              } else if (response.status === 404) {
-                continue
-              } else if (response.status === 500) {
-                setError(
-                  'Erro interno do servidor. Tente novamente mais tarde.'
-                )
-                hasError = true
-                continue
-              } else {
-                setError(`Erro ${response.status}: ${response.statusText}`)
-                hasError = true
-                continue
+            agendamentosDeHoje.sort((a, b) => {
+              try {
+                const horaA = a.horario_agendamento || '00:00'
+                const horaB = b.horario_agendamento || '00:00'
+                return horaA.localeCompare(horaB)
+              } catch {
+                return 0
               }
-            }
-          } catch (err) {
-            if (err instanceof Error) {
-              if (err.name === 'AbortError') {
-                continue
-              } else if (
-                err.name === 'TypeError' &&
-                err.message.includes('Failed to fetch')
-              ) {
-                continue
-              } else {
-                continue
-              }
+            })
+          } else {
+            if (response.status === 401) {
+              setError('Token inválido ou expirado. Faça login novamente.')
+              hasError = true
+              localStorage.removeItem('authToken')
+            } else if (response.status === 403) {
+              setError('Acesso não autorizado')
+              hasError = true
+            } else if (response.status === 404) {
+              setError('Endpoint não encontrado')
+              hasError = true
+            } else if (response.status === 500) {
+              setError(
+                'Erro interno do servidor. Tente novamente mais tarde.'
+              )
+              hasError = true
             } else {
-              continue
+              setError(`Erro ${response.status}: ${response.statusText}`)
+              hasError = true
             }
+          }
+        } catch (err) {
+          if (err instanceof Error) {
+            if (err.name === 'AbortError') {
+              if (agendamentosDeHoje.length > 0) {
+                setError('')
+              } else {
+                setError('Tempo de requisição esgotado. Alguns agendamentos podem não ter sido carregados.')
+              }
+              hasError = true
+            } else if (
+              err.name === 'TypeError' &&
+              err.message.includes('Failed to fetch')
+            ) {
+              if (agendamentosDeHoje.length > 0) {
+                setError('')
+              } else {
+                setError('Erro de conexão com o servidor')
+              }
+              hasError = true
+            } else {
+              if (agendamentosDeHoje.length > 0) {
+                setError('')
+              } else {
+                setError(`Erro: ${err.message}`)
+              }
+              hasError = true
+            }
+          } else {
+            if (agendamentosDeHoje.length > 0) {
+              setError('')
+            } else {
+              setError('Erro desconhecido ao carregar agendamentos')
+            }
+            hasError = true
           }
         }
 
@@ -244,23 +259,44 @@ export function Admin() {
     return valores[servicoId as keyof typeof valores] || 0
   }
 
-  const formatarHorario = (dataISO: string): string => {
+  const formatarHorario = (horario: string | undefined): string => {
+    if (!horario) return '--:--'
+    
     try {
-      const data = new Date(dataISO)
-      return data.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      const partes = String(horario).split(':')
+      if (partes.length >= 2) {
+        const hora = partes[0].padStart(2, '0')
+        const minuto = partes[1].padStart(2, '0')
+        return `${hora}:${minuto}`
+      }
+      return String(horario)
     } catch {
       return '--:--'
     }
   }
 
-  const extrairNomeCliente = (observacoes: string): string => {
-    if (!observacoes) return 'Cliente não informado'
-
-    const match = observacoes.match(/Proprietário:\s*(.+)/i)
-    return match ? match[1].trim() : 'Cliente'
+  const extrairNomeCliente = (
+    agendamento: Agendamento
+  ): string => {
+    if (agendamento.cliente_nome && agendamento.cliente_nome.trim() !== '') {
+      return agendamento.cliente_nome
+    }
+    
+    if (
+      agendamento.nome_proprietario &&
+      agendamento.nome_proprietario.trim() !== ''
+    ) {
+      return agendamento.nome_proprietario
+    }
+    
+    if (agendamento.observacoes) {
+      const match = agendamento.observacoes.match(/Proprietário:\s*(.+)/i)
+      if (match) {
+        return match[1].trim()
+      }
+    }
+    
+    return 'Cliente não informado'
   }
 
   const handleVerDetalhes = (agendamento: Agendamento) => {
@@ -356,11 +392,11 @@ export function Admin() {
                       <div className='flex items-center gap-4'>
                         <div className='flex-1'>
                           <p className='font-medium'>
-                            {extrairNomeCliente(agendamento.observacoes)}
+                            {extrairNomeCliente(agendamento)}
                           </p>
                           <p className='text-sm text-gray-600'>
                             Hoje às{' '}
-                            {formatarHorario(agendamento.data_agendamento)}
+                            {formatarHorario(agendamento.horario_agendamento)}
                           </p>
                           <p className='text-sm text-gray-600'>
                             {agendamento.placa_veiculo} •{' '}
@@ -372,16 +408,24 @@ export function Admin() {
                     <div className='flex items-center gap-2'>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
-                          agendamento.status === 'confirmado'
+                          agendamento.status === 'confirmado' ||
+                          agendamento.status === 'agendado'
                             ? 'bg-green-100 text-green-800'
                             : agendamento.status === 'pendente'
                             ? 'bg-yellow-100 text-yellow-800'
-                            : agendamento.status === 'cancelado'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-blue-100 text-blue-800'
+                            : agendamento.status === 'concluido' ||
+                              agendamento.status === 'concluído'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
                         }`}
                       >
-                        {agendamento.status || 'agendado'}
+                        {agendamento.status === 'concluido' ||
+                        agendamento.status === 'concluído'
+                          ? 'Concluído'
+                          : agendamento.status === 'confirmado' ||
+                            agendamento.status === 'agendado'
+                          ? 'Confirmado'
+                          : agendamento.status || 'Agendado'}
                       </span>
                       <Button
                         variant='outline'
@@ -411,16 +455,15 @@ export function Admin() {
                   Cliente:
                 </span>
                 <span className='text-foreground'>
-                  {extrairNomeCliente(selectedAgendamento.observacoes)}
+                  {extrairNomeCliente(selectedAgendamento)}
                 </span>
               </div>
               <div>
                 <span className='font-medium block text-sm'>
-                  Data:
+                  Horário:
                 </span>
                 <span className='text-foreground'>
-                  Hoje às{' '}
-                  {formatarHorario(selectedAgendamento.data_agendamento)}
+                  {formatarHorario(selectedAgendamento.horario_agendamento)}
                 </span>
               </div>
               <div>
