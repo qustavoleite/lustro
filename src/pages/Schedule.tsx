@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '../components/RadioGroup'
 import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, User, LogOut, Loader } from 'lucide-react'
 import { API_BASE_URL } from '../config/api'
+import { logout } from '../utils/auth'
 
 interface ModeloVeiculo {
   id: number
@@ -299,12 +300,10 @@ export function Schedule() {
                   Agendamentos
                 </Button>
               </Link>
-              <Link to='/'>
-                <Button variant='secondary' size='sm'>
-                  <LogOut className='w-4 h-4 mr-2' />
-                  Sair
-                </Button>
-              </Link>
+              <Button variant='secondary' size='sm' onClick={logout}>
+                <LogOut className='w-4 h-4 mr-2' />
+                Sair
+              </Button>
             </div>
           </div>
         </header>
@@ -395,12 +394,10 @@ export function Schedule() {
                 Minha agenda
               </Button>
             </Link>
-            <Link to='/'>
-              <Button variant='secondary' size='sm'>
-                <LogOut className='w-4 h-4 mr-2' />
-                Sair
-              </Button>
-            </Link>
+            <Button variant='secondary' size='sm' onClick={logout}>
+              <LogOut className='w-4 h-4 mr-2' />
+              Sair
+            </Button>
           </div>
         </div>
       </header>

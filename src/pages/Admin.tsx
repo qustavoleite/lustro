@@ -4,6 +4,7 @@ import { Calendar, Clock, LogOut, Loader } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE_URL } from '../config/api'
+import { logout } from '../utils/auth'
 
 interface Agendamento {
   id: number
@@ -254,11 +255,7 @@ export function Admin() {
             <Button
               variant='outline'
               size='sm'
-              onClick={() => {
-                localStorage.removeItem('authToken')
-                localStorage.removeItem('user')
-                window.location.href = '/'
-              }}
+              onClick={logout}
             >
               <LogOut className='w-4 h-4 mr-2' />
               Sair

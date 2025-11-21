@@ -18,6 +18,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { API_BASE_URL } from '../config/api'
+import { logout } from '../utils/auth'
 
 interface Agendamento {
   id: number
@@ -442,18 +443,14 @@ export function AdminSchedules() {
                 Voltar
               </Button>
             </Link>
-            <div className='font-heading font-bold text-2xl '>
-              Lustro Admin - Agendamentos
-            </div>
+            <div className='font-heading font-bold text-2xl '>Lustro Admin</div>
           </div>
 
           <div className='flex items-center gap-3'>
-            <Link to='/'>
-              <Button variant='outline' size='sm'>
-                <LogOut className='w-4 h-4 mr-2' />
-                Sair
-              </Button>
-            </Link>
+            <Button variant='outline' size='sm' onClick={logout}>
+              <LogOut className='w-4 h-4 mr-2' />
+              Sair
+            </Button>
           </div>
         </div>
       </header>

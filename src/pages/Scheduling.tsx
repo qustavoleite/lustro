@@ -18,6 +18,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { API_BASE_URL } from '../config/api'
+import { logout } from '../utils/auth'
 
 interface Agendamento {
   id: number
@@ -231,12 +232,14 @@ export function Scheduling() {
                 Agendar
               </Button>
             </Link>
-            <Link to='/'>
-              <Button variant='outline' size='sm'>
-                <LogOut className='w-4 h-4 mr-2' />
-                Sair
-              </Button>
-            </Link>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={logout}
+            >
+              <LogOut className='w-4 h-4 mr-2' />
+              Sair
+            </Button>
           </div>
         </div>
       </header>
