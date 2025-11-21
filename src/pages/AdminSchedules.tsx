@@ -1,5 +1,6 @@
 import { Button } from '../components/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card'
+import { DeleteBookingModal } from '../components/DeleteBookingModal'
 import {
   Calendar,
   Clock,
@@ -50,6 +51,10 @@ export function AdminSchedules() {
   const [error, setError] = useState('')
   const [retryCount, setRetryCount] = useState(0)
   const [cancelingId, setCancelingId] = useState<number | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedAgendamentoId, setSelectedAgendamentoId] = useState<
+    number | null
+  >(null)
 
   useEffect(() => {
     if (!authLoading) {
@@ -89,7 +94,7 @@ export function AdminSchedules() {
               user.email === 'admin@lustro.com' ||
               user.role === 'admin')
         } catch {
-          // Ignorar erro de parse
+          void 0
         }
       }
 
@@ -265,7 +270,6 @@ export function AdminSchedules() {
         )}`
       return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
     } catch {
-      // Ignorar erro de formatação
       return telefone || 'Nao informado'
     }
   }
@@ -284,7 +288,6 @@ export function AdminSchedules() {
         day: 'numeric',
       })
     } catch {
-      // Ignorar erro de formatação
       return dateStr
     }
   }
@@ -298,12 +301,22 @@ export function AdminSchedules() {
     return horario
   }
 
-  const handleCancelBooking = async (id: number) => {
-    if (!confirm('Tem certeza que deseja cancelar este agendamento?')) {
-      return
-    }
+  const handleOpenDeleteModal = (id: number) => {
+    setSelectedAgendamentoId(id)
+    setShowDeleteModal(true)
+  }
 
-    setCancelingId(id)
+  const handleCloseDeleteModal = () => {
+    if (cancelingId === null) {
+      setShowDeleteModal(false)
+      setSelectedAgendamentoId(null)
+    }
+  }
+
+  const handleCancelBooking = async () => {
+    if (!selectedAgendamentoId) return
+
+    setCancelingId(selectedAgendamentoId)
 
     try {
       const token = localStorage.getItem('authToken')
@@ -324,16 +337,16 @@ export function AdminSchedules() {
               user.email === 'admin@lustro.com' ||
               user.role === 'admin')
         } catch {
-          // Ignorar erro de parse
+          void 0
         }
       }
 
       const endpoints = isUserAdmin
         ? [
-            `${API_BASE_URL}/agendamentos/${id}`,
-            `${API_BASE_URL}/admin/dashboard/agendamentos/${id}`,
+            `${API_BASE_URL}/agendamentos/${selectedAgendamentoId}`,
+            `${API_BASE_URL}/admin/dashboard/agendamentos/${selectedAgendamentoId}`,
           ]
-        : [`${API_BASE_URL}/agendamentos/${id}`]
+        : [`${API_BASE_URL}/agendamentos/${selectedAgendamentoId}`]
 
       let response: Response | null = null
       let lastError = ''
@@ -360,9 +373,13 @@ export function AdminSchedules() {
                 (errorData.error.includes('cancelado') ||
                   errorData.error.includes('concluído'))
               ) {
-                setAgendamentos((prev) => prev.filter((ag) => ag.id !== id))
+                setAgendamentos((prev) =>
+                  prev.filter((ag) => ag.id !== selectedAgendamentoId)
+                )
                 alert('Este agendamento já foi cancelado ou concluído.')
                 setCancelingId(null)
+                setShowDeleteModal(false)
+                setSelectedAgendamentoId(null)
                 return
               }
             }
@@ -387,7 +404,11 @@ export function AdminSchedules() {
       }
 
       if (response.ok) {
-        setAgendamentos((prev) => prev.filter((ag) => ag.id !== id))
+        setAgendamentos((prev) =>
+          prev.filter((ag) => ag.id !== selectedAgendamentoId)
+        )
+        setShowDeleteModal(false)
+        setSelectedAgendamentoId(null)
       } else {
         const errorText = await response.text().catch(() => 'Erro desconhecido')
         alert(`Erro ao cancelar agendamento: ${response.status}. ${errorText}`)
@@ -502,11 +523,11 @@ export function AdminSchedules() {
                     <Button
                       variant='outline'
                       size='sm'
-                      onClick={() => handleCancelBooking(ag.id)}
-                      disabled={cancelingId === ag.id}
+                      onClick={() => handleOpenDeleteModal(ag.id)}
+                      disabled={cancelingId === ag.id || showDeleteModal}
                     >
                       <X className='w-4 h-4 mr-1' />
-                      {cancelingId === ag.id ? 'Cancelando...' : 'Cancelar'}
+                      Cancelar
                     </Button>
                   </div>
                 </CardHeader>
@@ -582,6 +603,15 @@ export function AdminSchedules() {
           </div>
         )}
       </div>
+
+      <DeleteBookingModal
+        isOpen={showDeleteModal}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleCancelBooking}
+        isLoading={cancelingId !== null}
+        title='Cancelar Agendamento'
+        message='Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.'
+      />
     </div>
   )
 }

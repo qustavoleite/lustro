@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '../components/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card'
 import { Badge } from '../components/Badge'
+import { DeleteBookingModal } from '../components/DeleteBookingModal'
 import { Link } from 'react-router-dom'
 import {
   Calendar,
@@ -42,6 +43,8 @@ export function Scheduling() {
   const [loading, setLoading] = useState(true)
   const [cancelingId, setCancelingId] = useState<number | null>(null)
   const [fetchError, setFetchError] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedAgendamentoId, setSelectedAgendamentoId] = useState<number | null>(null)
 
   const fetchAgendamentos = async () => {
     try {
@@ -82,28 +85,50 @@ export function Scheduling() {
     fetchAgendamentos()
   }, [])
 
-  const handleCancelBooking = async (id: number) => {
-    if (!confirm('Tem certeza que deseja cancelar?')) return
+  const handleOpenDeleteModal = (id: number) => {
+    setSelectedAgendamentoId(id)
+    setShowDeleteModal(true)
+  }
 
-    setCancelingId(id)
+  const handleCloseDeleteModal = () => {
+    if (cancelingId === null) {
+      setShowDeleteModal(false)
+      setSelectedAgendamentoId(null)
+    }
+  }
+
+  const handleCancelBooking = async () => {
+    if (!selectedAgendamentoId) return
+
+    setCancelingId(selectedAgendamentoId)
 
     try {
       const token = localStorage.getItem('authToken')
       if (!token) {
         alert('Sessão expirada')
+        setCancelingId(null)
+        setShowDeleteModal(false)
+        setSelectedAgendamentoId(null)
         return
       }
 
-      const response = await fetch(`${API_BASE_URL}/agendamentos/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/agendamentos/${selectedAgendamentoId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
 
       if (response.ok) {
-        setAgendamentos((prev) => prev.filter((ag) => ag.id !== id))
+        setAgendamentos((prev) =>
+          prev.filter((ag) => ag.id !== selectedAgendamentoId)
+        )
+        setShowDeleteModal(false)
+        setSelectedAgendamentoId(null)
       } else {
         alert('Erro ao cancelar')
       }
@@ -292,11 +317,11 @@ export function Scheduling() {
                     <Button
                       variant='outline'
                       size='sm'
-                      onClick={() => handleCancelBooking(ag.id)}
-                      disabled={cancelingId === ag.id}
+                      onClick={() => handleOpenDeleteModal(ag.id)}
+                      disabled={cancelingId === ag.id || showDeleteModal}
                     >
                       <X className='w-4 h-4 mr-1' />
-                      {cancelingId === ag.id ? 'Cancelando...' : 'Cancelar'}
+                      Cancelar
                     </Button>
                   </div>
                 </CardHeader>
@@ -358,6 +383,15 @@ export function Scheduling() {
           </div>
         )}
       </div>
+
+      <DeleteBookingModal
+        isOpen={showDeleteModal}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleCancelBooking}
+        isLoading={cancelingId !== null}
+        title='Cancelar Agendamento'
+        message='Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.'
+      />
     </div>
   )
 }
