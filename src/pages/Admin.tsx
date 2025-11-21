@@ -118,8 +118,33 @@ export function Admin() {
                 }
               }
 
+              const normalizedAgendamentos: Agendamento[] = (
+                agendamentos as Record<string, unknown>[]
+              ).map((ag) => ({
+                id: Number(ag.id) || 0,
+                data_agendamento: String(ag.data_agendamento || ag.data || ''),
+                servico_id: Number(ag.servico_id) || 0,
+                placa_veiculo: String(
+                  ag.placa_veiculo || ag.veiculo_placa || ag.placa || ''
+                ),
+                tipo_veiculo: String(ag.tipo_veiculo || ''),
+                marca: String(ag.marca || ''),
+                modelo: String(ag.modelo || ag.modelo_veiculo || ''),
+                telefone: String(
+                  ag.telefone ||
+                    ag.telefone_veiculo ||
+                    ag.telefone_cliente ||
+                    ag.cliente_telefone ||
+                    ag.phone ||
+                    ag.telefone_contato ||
+                    ''
+                ),
+                observacoes: String(ag.observacoes || ''),
+                status: String(ag.status || 'agendado'),
+              }))
+
               const hoje = new Date().toISOString().split('T')[0]
-              agendamentosDeHoje = agendamentos.filter((ag: Agendamento) => {
+              agendamentosDeHoje = normalizedAgendamentos.filter((ag) => {
                 try {
                   if (!ag.data_agendamento) return false
                   const dataAgendamento = new Date(ag.data_agendamento)
@@ -244,8 +269,8 @@ export function Admin() {
   }
 
   return (
-    <div className='min-h-screen'>
-      <header className='border-b border-gray-300'>
+    <div className='min-h-screen animate-in fade-in duration-500'>
+      <header className='border-b border-gray-300 animate-in slide-in-from-top duration-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
           <div className='font-heading font-bold text-2xl'>
             Lustro Admin
@@ -264,10 +289,10 @@ export function Admin() {
         </div>
       </header>
 
-      <div className='container mx-auto max-w-6xl px-4 py-8'>
+      <div className='container mx-auto max-w-6xl px-4 py-8 animate-in fade-in slide-in-from-bottom duration-500 delay-100'>
         <div className='grid md:grid-cols-2 gap-6 mb-8'>
           <Link to='/admin/schedules'>
-            <Card className='hover:shadow-lg transition-shadow cursor-pointer'>
+            <Card className='hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer animate-in fade-in slide-in-from-left duration-500 delay-200'>
               <CardContent className='p-6 text-center '>
                 <Calendar className='w-12 h-12 mx-auto mb-4 text-blue-700' />
                 <h3 className='font-heading font-semibold text-lg mb-2'>
@@ -279,7 +304,7 @@ export function Admin() {
           </Link>
 
           <Link to='/admin/timetable'>
-            <Card className='hover:shadow-lg transition-shadow cursor-pointer'>
+            <Card className='hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer animate-in fade-in slide-in-from-right duration-500 delay-200'>
               <CardContent className='p-6 text-center'>
                 <Clock className='w-12 h-12 mx-auto mb-4 text-blue-700' />
                 <h3 className='font-heading font-semibold text-lg mb-2'>
@@ -291,7 +316,7 @@ export function Admin() {
           </Link>
         </div>
 
-        <Card>
+        <Card className='animate-in fade-in slide-in-from-bottom duration-500 delay-300'>
           <CardHeader>
             <CardTitle className='font-heading text-xl'>
               Agendamentos de Hoje{' '}

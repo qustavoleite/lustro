@@ -44,7 +44,9 @@ export function Scheduling() {
   const [cancelingId, setCancelingId] = useState<number | null>(null)
   const [fetchError, setFetchError] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedAgendamentoId, setSelectedAgendamentoId] = useState<number | null>(null)
+  const [selectedAgendamentoId, setSelectedAgendamentoId] = useState<
+    number | null
+  >(null)
 
   const fetchAgendamentos = async () => {
     try {
@@ -69,8 +71,51 @@ export function Scheduling() {
 
       if (response.ok) {
         const data = await response.json()
-        const agendamentosArray = data.agendamentos || []
-        setAgendamentos(agendamentosArray)
+        let agendamentosArray = data.agendamentos || []
+
+        if (Array.isArray(data)) {
+          agendamentosArray = data
+        } else if (data.agendamentos && Array.isArray(data.agendamentos)) {
+          agendamentosArray = data.agendamentos
+        } else if (data.data && Array.isArray(data.data)) {
+          agendamentosArray = data.data
+        }
+
+        const normalizedAgendamentos: Agendamento[] = (
+          agendamentosArray as Record<string, unknown>[]
+        ).map((ag) => ({
+          id: Number(ag.id) || 0,
+          data_agendamento: String(ag.data_agendamento || ag.data || ''),
+          horario_agendamento: String(
+            ag.horario_agendamento || ag.horario || ''
+          ),
+          servico_id: Number(ag.servico_id) || 0,
+          veiculo_placa: String(
+            ag.veiculo_placa || ag.placa_veiculo || ag.placa || ''
+          ),
+          modelo_veiculo_nome: String(
+            ag.modelo_veiculo_nome || ag.modelo_veiculo || ag.modelo || ''
+          ),
+          nome_proprietario: String(
+            ag.nome_proprietario || ag.cliente_nome || ''
+          ),
+          telefone: String(
+            ag.telefone ||
+              ag.telefone_veiculo ||
+              ag.telefone_cliente ||
+              ag.cliente_telefone ||
+              ag.phone ||
+              ag.telefone_contato ||
+              ''
+          ),
+          observacoes: String(ag.observacoes || ''),
+          status: String(ag.status || 'agendado'),
+          servico_nome: ag.servico_nome ? String(ag.servico_nome) : undefined,
+          valor_total:
+            ag.valor_total != null ? Number(ag.valor_total) : undefined,
+        }))
+
+        setAgendamentos(normalizedAgendamentos)
       } else {
         setFetchError(`Erro ${response.status}`)
       }
@@ -246,8 +291,8 @@ export function Scheduling() {
   }
 
   return (
-    <div className='min-h-screen'>
-      <header className='border-b border-gray-300'>
+    <div className='min-h-screen animate-in fade-in duration-500'>
+      <header className='border-b border-gray-300 animate-in slide-in-from-top duration-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
           <div className='font-heading font-bold text-2xl'>Lustro</div>
           <div className='flex items-center gap-4'>
@@ -257,11 +302,7 @@ export function Scheduling() {
                 Agendar
               </Button>
             </Link>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={logout}
-            >
+            <Button variant='outline' size='sm' onClick={logout}>
               <LogOut className='w-4 h-4 mr-2' />
               Sair
             </Button>
@@ -269,8 +310,8 @@ export function Scheduling() {
         </div>
       </header>
 
-      <div className='container mx-auto max-w-4xl px-4 py-12'>
-        <div className='text-center mb-12'>
+      <div className='container mx-auto max-w-4xl px-4 py-12 animate-in fade-in slide-in-from-bottom duration-500 delay-100'>
+        <div className='text-center mb-12 animate-in fade-in slide-in-from-bottom duration-500 delay-150'>
           <h1 className='font-heading font-bold text-3xl md:text-4xl mb-4'>
             Meus Agendamentos
           </h1>
@@ -290,7 +331,7 @@ export function Scheduling() {
         )}
 
         {activeAgendamentos.length === 0 ? (
-          <Card>
+          <Card className='animate-in fade-in slide-in-from-bottom duration-500 delay-200'>
             <CardContent className='text-center py-12'>
               <Car className='w-16 h-16 mx-auto mb-4 text-gray-400' />
               <h3 className='text-xl font-semibold mb-2'>
@@ -300,7 +341,7 @@ export function Scheduling() {
                 Você ainda não possui agendamentos.
               </p>
               <Link to='/schedule'>
-                <Button className='bg-blue-700 hover:bg-blue-800'>
+                <Button className='bg-blue-700 hover:bg-blue-800 transition-all duration-300 hover:scale-105'>
                   Fazer Agendamento
                 </Button>
               </Link>
@@ -308,8 +349,14 @@ export function Scheduling() {
           </Card>
         ) : (
           <div className='space-y-6'>
-            {activeAgendamentos.map((ag) => (
-              <Card key={ag.id} className='hover:shadow-lg transition-shadow'>
+            {activeAgendamentos.map((ag, index) => (
+              <Card
+                key={ag.id}
+                className='hover:shadow-lg transition-all duration-300 hover:scale-[1.02] animate-in fade-in slide-in-from-bottom'
+                style={{
+                  animationDelay: `${index * 100}ms`,
+                }}
+              >
                 <CardHeader className='flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0 pb-4'>
                   <CardTitle className='text-lg'>Agendamento</CardTitle>
                   <div className='flex flex-row items-center gap-3'>

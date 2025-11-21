@@ -33,7 +33,7 @@ export function DeleteBookingModal({
     >
       <div className='absolute inset-0 bg-black/50 backdrop-blur-sm' />
 
-      <div className='relative bg-white rounded-lg shadow-xl max-w-md w-full border border-gray-300 transform transition-all duration-200 scale-100 opacity-100'>
+      <div className='relative bg-white rounded-lg shadow-xl max-w-md w-full border border-gray-300 transform transition-all duration-300 scale-100 opacity-100 animate-in fade-in zoom-in-95'>
         <div className='p-6'>
           <div className='flex items-start gap-4 mb-4'>
             <div className='flex-shrink-0'>

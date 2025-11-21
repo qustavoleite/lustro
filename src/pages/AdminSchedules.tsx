@@ -196,7 +196,9 @@ export function AdminSchedules() {
         ),
         telefone: String(
           ag.telefone ||
+            ag.telefone_veiculo ||
             ag.telefone_cliente ||
+            ag.cliente_telefone ||
             ag.phone ||
             ag.telefone_contato ||
             ''
@@ -454,8 +456,8 @@ export function AdminSchedules() {
   }
 
   return (
-    <div className='min-h-screen bg-gray-50'>
-      <header className='border-b border-gray-300 bg-white'>
+    <div className='min-h-screen bg-gray-50 animate-in fade-in duration-500'>
+      <header className='border-b border-gray-300 bg-white animate-in slide-in-from-top duration-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
           <div className='flex items-center gap-4'>
             <Link to='/admin'>
@@ -476,8 +478,8 @@ export function AdminSchedules() {
         </div>
       </header>
 
-      <div className='container mx-auto max-w-4xl px-4 py-12'>
-        <div className='text-center mb-12'>
+      <div className='container mx-auto max-w-4xl px-4 py-12 animate-in fade-in slide-in-from-bottom duration-500 delay-100'>
+        <div className='text-center mb-12 animate-in fade-in slide-in-from-bottom duration-500 delay-150'>
           <h1 className='font-heading font-bold text-3xl md:text-4xl  mb-4'>
             Agendamentos dos Clientes
           </h1>
@@ -502,7 +504,7 @@ export function AdminSchedules() {
             <p>Carregando agendamentos...</p>
           </div>
         ) : activeAgendamentos.length === 0 ? (
-          <Card>
+          <Card className='animate-in fade-in slide-in-from-bottom duration-500 delay-200'>
             <CardContent className='text-center py-12'>
               <Calendar className='w-16 h-16 mx-auto mb-4 text-gray-400' />
               <h3 className='text-xl font-semibold  mb-2'>
@@ -515,8 +517,14 @@ export function AdminSchedules() {
           </Card>
         ) : (
           <div className='space-y-6'>
-            {activeAgendamentos.map((ag) => (
-              <Card key={ag.id} className='hover:shadow-lg transition-shadow'>
+            {activeAgendamentos.map((ag, index) => (
+              <Card
+                key={ag.id}
+                className='hover:shadow-lg transition-all duration-300 hover:scale-[1.02] animate-in fade-in slide-in-from-bottom'
+                style={{
+                  animationDelay: `${index * 100}ms`,
+                }}
+              >
                 <CardHeader className='flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0 pb-4'>
                   <CardTitle className='text-lg'>Agendamento</CardTitle>
                   <div className='flex flex-row items-center gap-3'>

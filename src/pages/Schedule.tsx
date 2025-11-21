@@ -16,6 +16,13 @@ interface ModeloVeiculo {
   tipo: string
 }
 
+interface Agendamento {
+  id: number
+  data_agendamento: string
+  horario_agendamento: string
+  status: string
+}
+
 export function Schedule() {
   const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState('')
@@ -31,6 +38,7 @@ export function Schedule() {
   const [modelosVeiculo, setModelosVeiculo] = useState<ModeloVeiculo[]>([])
   const [loadingModelos, setLoadingModelos] = useState(true)
   const [errorModelos, setErrorModelos] = useState('')
+  const [agendamentosDoDia, setAgendamentosDoDia] = useState<Agendamento[]>([])
 
   const serviceMap = {
     externa: 1,
@@ -121,9 +129,83 @@ export function Schedule() {
     )}`
   }
 
+  const fetchAgendamentosDoDia = async (date: string) => {
+    if (!date) {
+      setAgendamentosDoDia([])
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('authToken')
+
+      if (!token) {
+        setAgendamentosDoDia([])
+        return
+      }
+
+      const response = await fetch(`${API_BASE_URL}/agendamentos`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        let agendamentos: Agendamento[] = []
+
+        if (Array.isArray(data)) {
+          agendamentos = data
+        } else if (data.agendamentos && Array.isArray(data.agendamentos)) {
+          agendamentos = data.agendamentos
+        } else if (data.data && Array.isArray(data.data)) {
+          agendamentos = data.data
+        }
+
+        const agendamentosFiltrados = agendamentos.filter((ag) => {
+          if (!ag.data_agendamento) return false
+
+          let dataAgendamento = ''
+          const dataStr = String(ag.data_agendamento)
+          if (dataStr.includes('T')) {
+            dataAgendamento = dataStr.split('T')[0]
+          } else {
+            dataAgendamento = dataStr.split(' ')[0]
+          }
+
+          const statusLower = (ag.status?.toLowerCase() || '').trim()
+          return (
+            dataAgendamento === date &&
+            !['cancelado', 'concluido', 'concluído', 'expirado'].includes(
+              statusLower
+            )
+          )
+        })
+
+        setAgendamentosDoDia(agendamentosFiltrados)
+      } else {
+        setAgendamentosDoDia([])
+      }
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos:', error)
+      setAgendamentosDoDia([])
+    }
+  }
+
   const getUnavailableTimes = (date: string): string[] => {
-    void date
-    return []
+    if (!date || agendamentosDoDia.length === 0) return []
+
+    return agendamentosDoDia
+      .map((ag) => {
+        if (!ag.horario_agendamento) return null
+        const horario = ag.horario_agendamento.split(':')
+        if (horario.length >= 2) {
+          return `${horario[0].padStart(2, '0')}:${horario[1].padStart(2, '0')}`
+        }
+        return null
+      })
+      .filter((time): time is string => time !== null)
   }
 
   const isTimeAvailable = (date: string, time: string) => {
@@ -133,6 +215,25 @@ export function Schedule() {
 
     if (dayOfWeek === 0) return false
     if (hour < 8 || hour >= 18) return false
+
+    const hojeString = getTodayString()
+
+    if (date === hojeString) {
+      const agora = new Date()
+      const horaAtual = agora.getHours()
+      const minutoAtual = agora.getMinutes()
+      const horaSelecionada = parseInt(time.split(':')[0])
+      const minutoSelecionado = parseInt(time.split(':')[1])
+
+      const agoraEmMinutos = horaAtual * 60 + minutoAtual
+      const selecionadoEmMinutos = horaSelecionada * 60 + minutoSelecionado
+
+      const diferencaMinutos = selecionadoEmMinutos - agoraEmMinutos
+
+      if (diferencaMinutos < 60) {
+        return false
+      }
+    }
 
     return true
   }
@@ -235,12 +336,32 @@ export function Schedule() {
         await response.json()
         navigate('/scheduling')
       } else {
-        const detail = await response.text().catch(() => '')
-        throw new Error(
-          `Falha ao agendar no servidor (HTTP ${response.status}). ${
-            detail || ''
-          }`
-        )
+        let errorMessage = `Falha ao agendar no servidor (HTTP ${response.status})`
+
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+          } else if (errorData.message) {
+            errorMessage = errorData.message
+          }
+        } catch {
+          const detail = await response.text().catch(() => '')
+          if (detail) {
+            try {
+              const parsed = JSON.parse(detail)
+              if (parsed.error) {
+                errorMessage = parsed.error
+              }
+            } catch {
+              if (detail) {
+                errorMessage = detail
+              }
+            }
+          }
+        }
+
+        throw new Error(errorMessage)
       }
     } catch (error) {
       alert(
@@ -289,8 +410,8 @@ export function Schedule() {
     const nomeModelo = modeloSelecionado?.nome || carModel
 
     return (
-      <div className='min-h-screen bg-background'>
-        <header className='border-b border-gray-300'>
+      <div className='min-h-screen bg-background animate-in fade-in duration-500'>
+        <header className='border-b border-gray-300 animate-in slide-in-from-top duration-300'>
           <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
             <div className='font-heading font-bold text-2xl'>Lustro</div>
             <div className='flex items-center gap-4'>
@@ -308,8 +429,8 @@ export function Schedule() {
           </div>
         </header>
 
-        <div className='container mx-auto max-w-2xl px-4 py-12'>
-          <Card>
+        <div className='container mx-auto max-w-2xl px-4 py-12 animate-in fade-in slide-in-from-bottom duration-500 delay-100'>
+          <Card className='animate-in fade-in zoom-in duration-500 delay-200'>
             <CardHeader className='text-center'>
               <CardTitle className='font-heading text-xl mb-7'>
                 Resumo do Agendamento
@@ -383,8 +504,8 @@ export function Schedule() {
   }
 
   return (
-    <div className='min-h-screen bg-background'>
-      <header className='border-b border-gray-300'>
+    <div className='min-h-screen bg-background animate-in fade-in duration-500'>
+      <header className='border-b border-gray-300 animate-in slide-in-from-top duration-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
           <div className='font-heading font-bold text-2xl'>Lustro</div>
           <div className='flex items-center gap-4'>
@@ -402,8 +523,8 @@ export function Schedule() {
         </div>
       </header>
 
-      <div className='container mx-auto max-w-4xl px-4 py-12'>
-        <div className='text-center mb-12'>
+      <div className='container mx-auto max-w-4xl px-4 py-12 animate-in fade-in slide-in-from-bottom duration-500 delay-100'>
+        <div className='text-center mb-12 animate-in fade-in slide-in-from-bottom duration-500 delay-150'>
           <h1 className='font-heading font-bold text-3xl md:text-4xl mb-4'>
             Agendar Lavagem
           </h1>
@@ -412,9 +533,9 @@ export function Schedule() {
           </p>
         </div>
 
-        <div className='grid lg:grid-cols-2 gap-8'>
+        <div className='grid lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom duration-500 delay-200'>
           <div className='space-y-6'>
-            <Card>
+            <Card className='animate-in fade-in slide-in-from-left duration-500 delay-300'>
               <CardHeader>
                 <CardTitle className='flex items-center gap-2'>
                   <Calendar className='w-5 h-5 text-blue-700' />
@@ -444,6 +565,7 @@ export function Schedule() {
 
                       setSelectedDate(inputValue)
                       setSelectedTime('')
+                      fetchAgendamentosDoDia(inputValue)
                     }}
                     min={getTodayString()}
                     className='w-full'
@@ -451,7 +573,7 @@ export function Schedule() {
                 </div>
 
                 {selectedDate && (
-                  <div>
+                  <div className='animate-in fade-in slide-in-from-bottom duration-300'>
                     <div className='mb-2 p-2 bg-blue-50 rounded text-sm'>
                       <strong>Data selecionada:</strong>{' '}
                       {formatDateForDisplay(selectedDate)}
@@ -459,9 +581,10 @@ export function Schedule() {
                     <Label>Horários Disponíveis</Label>
                     <div className='grid grid-cols-4 gap-2 mt-2'>
                       {timeSlots.map((time) => {
+                        const isOccupied =
+                          getUnavailableTimes(selectedDate).includes(time)
                         const isUnavailable =
-                          getUnavailableTimes(selectedDate).includes(time) ||
-                          !isTimeAvailable(selectedDate, time)
+                          isOccupied || !isTimeAvailable(selectedDate, time)
 
                         return (
                           <Button
@@ -472,14 +595,19 @@ export function Schedule() {
                             size='sm'
                             disabled={isUnavailable}
                             onClick={() => setSelectedTime(time)}
-                            className={`
+                            className={`transition-all duration-200 hover:scale-105
                               ${
                                 selectedTime === time
                                   ? 'bg-blue-700 hover:bg-accent/90 text-white'
                                   : ''
                               }
                               ${
-                                isUnavailable
+                                isOccupied
+                                  ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+                                  : ''
+                              }
+                              ${
+                                isUnavailable && !isOccupied
                                   ? 'opacity-50 cursor-not-allowed'
                                   : ''
                               }
@@ -490,17 +618,29 @@ export function Schedule() {
                         )
                       })}
                     </div>
-                    {getUnavailableTimes(selectedDate).length > 0 && (
-                      <p className='text-xs mt-2 text-gray-600'>
-                        * Horários em cinza não estão disponíveis
-                      </p>
-                    )}
+                    <div className='text-xs mt-2 space-y-1'>
+                      {getUnavailableTimes(selectedDate).length > 0 && (
+                        <p className='text-gray-600'>
+                          * Horários em{' '}
+                          <span className='text-red-600 font-semibold'>
+                            vermelho
+                          </span>{' '}
+                          estão ocupados
+                        </p>
+                      )}
+                      {selectedDate === getTodayString() && (
+                        <p className='text-blue-600 font-medium'>
+                          ℹ️ Para agendamentos no mesmo dia, é necessário pelo
+                          menos 1 hora de antecedência
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className='animate-in fade-in slide-in-from-left duration-500 delay-400'>
               <CardHeader>
                 <CardTitle>Tipo de Lavagem</CardTitle>
               </CardHeader>
@@ -589,7 +729,7 @@ export function Schedule() {
           </div>
 
           <div className='space-y-6'>
-            <Card>
+            <Card className='animate-in fade-in slide-in-from-right duration-500 delay-300'>
               <CardHeader>
                 <CardTitle>Dados do Veículo</CardTitle>
               </CardHeader>
@@ -632,7 +772,7 @@ export function Schedule() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className='animate-in fade-in slide-in-from-right duration-500 delay-400'>
               <CardHeader>
                 <CardTitle>Modelo do Carro</CardTitle>
               </CardHeader>
@@ -686,9 +826,9 @@ export function Schedule() {
           </div>
         </div>
 
-        <div className='flex justify-center mt-8'>
+        <div className='flex justify-center mt-8 animate-in fade-in slide-in-from-bottom duration-500 delay-500'>
           <Button
-            className='bg-blue-700 hover:bg-accent/90 text-lg py-6 px-12'
+            className='bg-blue-700 hover:bg-accent/90 text-lg py-6 px-12 transition-all duration-300 hover:scale-105'
             onClick={handleConfirmBooking}
             disabled={!isFormComplete || loadingModelos}
           >
