@@ -18,8 +18,8 @@ export function useAuth() {
 
           const userIsAdmin = parsedUser.email === 'admin@lustro.com'
           setIsAdmin(userIsAdmin)
-        } catch (error) {
-          // Ignorar erro de parse
+        } catch {
+          void 0
         }
       }
 

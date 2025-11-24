@@ -54,7 +54,7 @@ export function Admin() {
             const user = JSON.parse(userData)
             isUserAdmin = user && user.email === 'admin@lustro.com'
           } catch {
-            // Ignorar erro de parse
+            void 0
           }
         }
 

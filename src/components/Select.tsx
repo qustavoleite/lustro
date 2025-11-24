@@ -36,7 +36,6 @@ export function Select({
         handleClose()
       }
     }
-    // Use 'click' so item onClick fires before this handler
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
