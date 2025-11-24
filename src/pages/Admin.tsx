@@ -92,10 +92,7 @@ export function Admin() {
 
             if (Array.isArray(data)) {
               agendamentos = data
-            } else if (
-              data.agendamentos &&
-              Array.isArray(data.agendamentos)
-            ) {
+            } else if (data.agendamentos && Array.isArray(data.agendamentos)) {
               agendamentos = data.agendamentos
             } else if (data.data && Array.isArray(data.data)) {
               agendamentos = data.data
@@ -111,10 +108,12 @@ export function Admin() {
             }
 
             const normalizedAgendamentos: Agendamento[] = (
-              agendamentos as Record<string, unknown>[]
+              agendamentos as unknown as Record<string, unknown>[]
             )
               .filter((ag) => {
-                const status = String(ag.status || '').toLowerCase().trim()
+                const status = String(ag.status || '')
+                  .toLowerCase()
+                  .trim()
                 return !['cancelado', 'expirado'].includes(status)
               })
               .map((ag) => ({
@@ -125,18 +124,12 @@ export function Admin() {
                   : undefined,
                 servico_id: Number(ag.servico_id) || 0,
                 placa_veiculo: String(
-                  ag.veiculo_placa ||
-                    ag.placa_veiculo ||
-                    ag.placa ||
-                    ''
+                  ag.veiculo_placa || ag.placa_veiculo || ag.placa || ''
                 ),
                 tipo_veiculo: String(ag.tipo_veiculo || ''),
                 marca: String(ag.marca || ''),
                 modelo: String(
-                  ag.modelo_veiculo_nome ||
-                    ag.modelo ||
-                    ag.modelo_veiculo ||
-                    ''
+                  ag.modelo_veiculo_nome || ag.modelo || ag.modelo_veiculo || ''
                 ),
                 telefone: String(
                   ag.telefone_veiculo ||
@@ -149,7 +142,9 @@ export function Admin() {
                 ),
                 observacoes: String(ag.observacoes || ''),
                 status: String(ag.status || 'agendado'),
-                cliente_nome: ag.cliente_nome ? String(ag.cliente_nome) : undefined,
+                cliente_nome: ag.cliente_nome
+                  ? String(ag.cliente_nome)
+                  : undefined,
                 nome_proprietario: ag.nome_proprietario
                   ? String(ag.nome_proprietario)
                   : undefined,
@@ -178,9 +173,7 @@ export function Admin() {
               setError('Endpoint não encontrado')
               hasError = true
             } else if (response.status === 500) {
-              setError(
-                'Erro interno do servidor. Tente novamente mais tarde.'
-              )
+              setError('Erro interno do servidor. Tente novamente mais tarde.')
               hasError = true
             } else {
               setError(`Erro ${response.status}: ${response.statusText}`)
@@ -193,7 +186,9 @@ export function Admin() {
               if (agendamentosDeHoje.length > 0) {
                 setError('')
               } else {
-                setError('Tempo de requisição esgotado. Alguns agendamentos podem não ter sido carregados.')
+                setError(
+                  'Tempo de requisição esgotado. Alguns agendamentos podem não ter sido carregados.'
+                )
               }
               hasError = true
             } else if (
@@ -261,7 +256,7 @@ export function Admin() {
 
   const formatarHorario = (horario: string | undefined): string => {
     if (!horario) return '--:--'
-    
+
     try {
       const partes = String(horario).split(':')
       if (partes.length >= 2) {
@@ -275,27 +270,25 @@ export function Admin() {
     }
   }
 
-  const extrairNomeCliente = (
-    agendamento: Agendamento
-  ): string => {
+  const extrairNomeCliente = (agendamento: Agendamento): string => {
     if (agendamento.cliente_nome && agendamento.cliente_nome.trim() !== '') {
       return agendamento.cliente_nome
     }
-    
+
     if (
       agendamento.nome_proprietario &&
       agendamento.nome_proprietario.trim() !== ''
     ) {
       return agendamento.nome_proprietario
     }
-    
+
     if (agendamento.observacoes) {
       const match = agendamento.observacoes.match(/Proprietário:\s*(.+)/i)
       if (match) {
         return match[1].trim()
       }
     }
-    
+
     return 'Cliente não informado'
   }
 
@@ -308,16 +301,10 @@ export function Admin() {
     <div className='min-h-screen animate-in fade-in duration-500'>
       <header className='border-b border-gray-300 animate-in slide-in-from-top duration-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-          <div className='font-heading font-bold text-2xl'>
-            Lustro Admin
-          </div>
+          <div className='font-heading font-bold text-2xl'>Lustro Admin</div>
 
           <div className='flex items-center gap-3'>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={logout}
-            >
+            <Button variant='outline' size='sm' onClick={logout}>
               <LogOut className='w-4 h-4 mr-2' />
               Sair
             </Button>
@@ -328,7 +315,7 @@ export function Admin() {
       <div className='container mx-auto max-w-6xl px-4 py-8 animate-in fade-in slide-in-from-bottom duration-500 delay-100'>
         <div className='grid md:grid-cols-2 gap-6 mb-8'>
           <Link to='/admin/schedules'>
-            <Card className='hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer animate-in fade-in slide-in-from-left duration-500 delay-200'>
+            <Card className='hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer animate-in fade-in slide-in-from-left delay-200'>
               <CardContent className='p-6 text-center '>
                 <Calendar className='w-12 h-12 mx-auto mb-4 text-blue-700' />
                 <h3 className='font-heading font-semibold text-lg mb-2'>
@@ -340,7 +327,7 @@ export function Admin() {
           </Link>
 
           <Link to='/admin/timetable'>
-            <Card className='hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer animate-in fade-in slide-in-from-right duration-500 delay-200'>
+            <Card className='hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer animate-in fade-in slide-in-from-right delay-200'>
               <CardContent className='p-6 text-center'>
                 <Clock className='w-12 h-12 mx-auto mb-4 text-blue-700' />
                 <h3 className='font-heading font-semibold text-lg mb-2'>
@@ -451,81 +438,61 @@ export function Admin() {
             </h3>
             <div className='space-y-3'>
               <div>
-                <span className='font-medium block text-sm'>
-                  Cliente:
-                </span>
+                <span className='font-medium block text-sm'>Cliente:</span>
                 <span className='text-foreground'>
                   {extrairNomeCliente(selectedAgendamento)}
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Horário:
-                </span>
+                <span className='font-medium block text-sm'>Horário:</span>
                 <span className='text-foreground'>
                   {formatarHorario(selectedAgendamento.horario_agendamento)}
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Serviço:
-                </span>
+                <span className='font-medium block text-sm'>Serviço:</span>
                 <span className='text-foreground'>
                   Lavagem {getServicoNome(selectedAgendamento.servico_id)}
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Valor:
-                </span>
+                <span className='font-medium block text-sm'>Valor:</span>
                 <span className='text-foreground'>
                   R$ {getServicoValor(selectedAgendamento.servico_id)},00
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Placa:
-                </span>
+                <span className='font-medium block text-sm'>Placa:</span>
                 <span className='text-foreground'>
                   {selectedAgendamento.placa_veiculo}
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Telefone:
-                </span>
+                <span className='font-medium block text-sm'>Telefone:</span>
                 <span className='text-foreground'>
                   {selectedAgendamento.telefone}
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Modelo:
-                </span>
+                <span className='font-medium block text-sm'>Modelo:</span>
                 <span className='text-foreground capitalize'>
                   {selectedAgendamento.modelo}
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Marca:
-                </span>
+                <span className='font-medium block text-sm'>Marca:</span>
                 <span className='text-foreground capitalize'>
                   {selectedAgendamento.marca}
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Cor:
-                </span>
+                <span className='font-medium block text-sm'>Cor:</span>
                 <span className='text-foreground capitalize'>
                   {selectedAgendamento.cor}
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>
-                  Status:
-                </span>
+                <span className='font-medium block text-sm'>Status:</span>
                 <span className='text-foreground capitalize'>
                   {selectedAgendamento.status || 'agendado'}
                 </span>
