@@ -187,8 +187,7 @@ export function Schedule() {
       } else {
         setAgendamentosDoDia([])
       }
-    } catch (error) {
-      console.error('Erro ao buscar agendamentos:', error)
+    } catch {
       setAgendamentosDoDia([])
     }
   }
