@@ -1,14 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card'
 import { Label } from '../components/Label'
 import { Select, SelectItem } from '../components/Select'
 import { RadioGroup, RadioGroupItem } from '../components/RadioGroup'
-import { Link } from 'react-router-dom'
-import { Calendar, User, LogOut } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Calendar, User, LogOut, Loader } from 'lucide-react'
+import { API_BASE_URL } from '../config/api'
+import { logout } from '../utils/auth'
+
+interface ModeloVeiculo {
+  id: number
+  nome: string
+  tipo: string
+}
+
+interface Agendamento {
+  id: number
+  data_agendamento: string
+  horario_agendamento: string
+  status: string
+}
 
 export function Schedule() {
+  const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [washType, setWashType] = useState('')
@@ -17,6 +33,76 @@ export function Schedule() {
   const [phone, setPhone] = useState('')
   const [carOwner, setCarOwner] = useState('')
   const [showSummary, setShowSummary] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [authToken, setAuthToken] = useState<string | null>(null)
+  const [modelosVeiculo, setModelosVeiculo] = useState<ModeloVeiculo[]>([])
+  const [loadingModelos, setLoadingModelos] = useState(true)
+  const [errorModelos, setErrorModelos] = useState('')
+  const [agendamentosDoDia, setAgendamentosDoDia] = useState<Agendamento[]>([])
+
+  const serviceMap = {
+    externa: 1,
+    interna: 2,
+    completa: 3,
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    setAuthToken(token)
+  }, [])
+
+  useEffect(() => {
+    const fetchModelosVeiculo = async () => {
+      try {
+        setLoadingModelos(true)
+        setErrorModelos('')
+
+        const response = await fetch(`${API_BASE_URL}/modelos-veiculo`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`Erro ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+
+        let modelos = null
+
+        if (Array.isArray(data)) {
+          modelos = data
+        } else if (data.data && Array.isArray(data.data)) {
+          modelos = data.data
+        } else if (data.modelos && Array.isArray(data.modelos)) {
+          modelos = data.modelos
+        } else if (data.results && Array.isArray(data.results)) {
+          modelos = data.results
+        }
+
+        if (!modelos || modelos.length === 0) {
+          throw new Error(
+            'Nenhum modelo de veículo encontrado na resposta da API'
+          )
+        }
+
+        setModelosVeiculo(modelos)
+      } catch (err) {
+        setErrorModelos(
+          err instanceof Error
+            ? err.message
+            : 'Erro ao carregar modelos de veículo da API.'
+        )
+        setModelosVeiculo([])
+      } finally {
+        setLoadingModelos(false)
+      }
+    }
+
+    fetchModelosVeiculo()
+  }, [])
 
   const prices = {
     externa: 40,
@@ -24,14 +110,132 @@ export function Schedule() {
     completa: 80,
   }
 
-  const getUnavailableTimes = (date: string) => {
-    // logica mockada
-    const unavailable: { [key: string]: string[] } = {
-      '2024-01-15': ['09:00', '14:00'],
-      '2024-01-16': ['10:00', '15:00', '16:00'],
-      '2024-01-17': ['08:00', '11:00'],
+  const formatPlate = (value: string) => {
+    const cleaned = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    if (cleaned.length <= 3) return cleaned
+    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}`
+  }
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 2) return `(${digits}`
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+    if (digits.length <= 10)
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(
+      7,
+      11
+    )}`
+  }
+
+  const fetchAgendamentosDoDia = async (date: string) => {
+    if (!date) {
+      setAgendamentosDoDia([])
+      return
     }
-    return unavailable[date] || []
+
+    try {
+      const token = localStorage.getItem('authToken')
+
+      if (!token) {
+        setAgendamentosDoDia([])
+        return
+      }
+
+      const response = await fetch(`${API_BASE_URL}/agendamentos`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        let agendamentos: Agendamento[] = []
+
+        if (Array.isArray(data)) {
+          agendamentos = data
+        } else if (data.agendamentos && Array.isArray(data.agendamentos)) {
+          agendamentos = data.agendamentos
+        } else if (data.data && Array.isArray(data.data)) {
+          agendamentos = data.data
+        }
+
+        const agendamentosFiltrados = agendamentos.filter((ag) => {
+          if (!ag.data_agendamento) return false
+
+          let dataAgendamento = ''
+          const dataStr = String(ag.data_agendamento)
+          if (dataStr.includes('T')) {
+            dataAgendamento = dataStr.split('T')[0]
+          } else {
+            dataAgendamento = dataStr.split(' ')[0]
+          }
+
+          const statusLower = (ag.status?.toLowerCase() || '').trim()
+          return (
+            dataAgendamento === date &&
+            !['cancelado', 'concluido', 'concluído', 'expirado'].includes(
+              statusLower
+            )
+          )
+        })
+
+        setAgendamentosDoDia(agendamentosFiltrados)
+      } else {
+        setAgendamentosDoDia([])
+      }
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos:', error)
+      setAgendamentosDoDia([])
+    }
+  }
+
+  const getUnavailableTimes = (date: string): string[] => {
+    if (!date || agendamentosDoDia.length === 0) return []
+
+    return agendamentosDoDia
+      .map((ag) => {
+        if (!ag.horario_agendamento) return null
+        const horario = ag.horario_agendamento.split(':')
+        if (horario.length >= 2) {
+          return `${horario[0].padStart(2, '0')}:${horario[1].padStart(2, '0')}`
+        }
+        return null
+      })
+      .filter((time): time is string => time !== null)
+  }
+
+  const isTimeAvailable = (date: string, time: string) => {
+    const selectedDateTime = new Date(`${date}T${time}`)
+    const dayOfWeek = selectedDateTime.getDay()
+    const hour = parseInt(time.split(':')[0])
+
+    if (dayOfWeek === 0) return false
+    if (hour < 8 || hour >= 18) return false
+
+    const hojeString = getTodayString()
+
+    if (date === hojeString) {
+      const agora = new Date()
+      const horaAtual = agora.getHours()
+      const minutoAtual = agora.getMinutes()
+      const horaSelecionada = parseInt(time.split(':')[0])
+      const minutoSelecionado = parseInt(time.split(':')[1])
+
+      const agoraEmMinutos = horaAtual * 60 + minutoAtual
+      const selecionadoEmMinutos = horaSelecionada * 60 + minutoSelecionado
+
+      const diferencaMinutos = selecionadoEmMinutos - agoraEmMinutos
+
+      if (diferencaMinutos < 60) {
+        return false
+      }
+    }
+
+    return true
   }
 
   const timeSlots = [
@@ -53,76 +257,121 @@ export function Schedule() {
   }
 
   const handleConfirmBooking = () => {
-    if (
-      selectedDate &&
-      selectedTime &&
-      washType &&
-      carModel &&
-      carOwner &&
-      plate &&
-      phone
-    ) {
-      setShowSummary(true)
+    if (!authToken) {
+      alert(
+        'Você precisa estar logado para fazer um agendamento. Redirecionando para login...'
+      )
+      navigate('/login')
+      return
     }
+
+    const errors = []
+    if (!selectedDate) errors.push('Data é obrigatória')
+    if (!selectedTime) errors.push('Horário é obrigatório')
+    if (!washType) errors.push('Tipo de lavagem é obrigatório')
+    if (!carModel) errors.push('Modelo do carro é obrigatório')
+    if (!carOwner.trim()) errors.push('Proprietário é obrigatório')
+    if (!plate.trim()) errors.push('Placa é obrigatória')
+    if (phone.replace(/\D/g, '').length < 10)
+      errors.push('Telefone é obrigatório')
+
+    if (selectedDate) {
+      const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`)
+      const dayOfWeek = selectedDateTime.getDay()
+      if (dayOfWeek === 0) {
+        errors.push('Não funcionamos aos domingos')
+      }
+    }
+
+    if (errors.length > 0) {
+      alert(`Por favor, corrija os seguintes campos:\n${errors.join('\n')}`)
+      return
+    }
+
+    setShowSummary(true)
   }
 
-  const handleFinalizeBooking = () => {
-    let existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]')
-    const hasLegacyIds = existingBookings.some(
-      (b: { id: number }) => Number(b?.id) >= 1000000
-    )
-    if (hasLegacyIds) {
-      const renumbered = [...existingBookings]
-        .sort((a: any, b: any) => {
-          const dateCmp = String(a.date).localeCompare(String(b.date))
-          if (dateCmp !== 0) return dateCmp
-          return String(a.time).localeCompare(String(b.time))
-        })
-        .map((b: any, idx: number) => ({ ...b, id: idx + 1 }))
-      localStorage.setItem('bookings', JSON.stringify(renumbered))
-      localStorage.setItem('bookingCounter', String(renumbered.length))
-      existingBookings = renumbered
+  const handleFinalizeBooking = async () => {
+    setIsProcessing(true)
+
+    try {
+      if (!authToken) {
+        alert('Sessão expirada. Faça login novamente.')
+        navigate('/login')
+        return
+      }
+
+      const modeloSelecionado = modelosVeiculo.find(
+        (modelo) => modelo.id === parseInt(carModel)
+      )
+      const tipoVeiculo = modeloSelecionado?.tipo || carModel
+
+      const dataAgendamento = selectedDate
+      const servicoId = serviceMap[washType as keyof typeof serviceMap]
+
+      const backendPayload = {
+        data_agendamento: dataAgendamento,
+        horario_agendamento: selectedTime,
+        servico_id: servicoId,
+        placa_veiculo: plate.replace('-', '').toUpperCase(),
+        placa: plate.replace('-', '').toUpperCase(),
+        tipo_veiculo: tipoVeiculo,
+        modelo_veiculo: modeloSelecionado?.nome || carModel,
+        modelo_veiculo_id: modeloSelecionado?.id || parseInt(carModel),
+        nome_proprietario: carOwner,
+        telefone: phone.replace(/\D/g, ''),
+        observacoes: `Proprietário: ${carOwner}`,
+      }
+
+      const response = await fetch(`${API_BASE_URL}/agendamentos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(backendPayload),
+      })
+
+      if (response.ok) {
+        await response.json()
+        navigate('/scheduling')
+      } else {
+        let errorMessage = `Falha ao agendar no servidor (HTTP ${response.status})`
+
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+          } else if (errorData.message) {
+            errorMessage = errorData.message
+          }
+        } catch {
+          const detail = await response.text().catch(() => '')
+          if (detail) {
+            try {
+              const parsed = JSON.parse(detail)
+              if (parsed.error) {
+                errorMessage = parsed.error
+              }
+            } catch {
+              if (detail) {
+                errorMessage = detail
+              }
+            }
+          }
+        }
+
+        throw new Error(errorMessage)
+      }
+    } catch (error) {
+      alert(
+        `Erro ao realizar agendamento: ${
+          error instanceof Error ? error.message : 'Tente novamente.'
+        }`
+      )
+    } finally {
+      setIsProcessing(false)
     }
-    const COUNTER_KEY = 'bookingCounter'
-    let counter = parseInt(localStorage.getItem(COUNTER_KEY) || '0', 10)
-    if (!Number.isFinite(counter) || counter < 0)
-      counter = existingBookings.length
-    const nextId = counter + 1
-    localStorage.setItem(COUNTER_KEY, String(nextId))
-
-    const normalizedDate = selectedDate.includes('-')
-      ? selectedDate
-      : new Date(selectedDate).toISOString().split('T')[0]
-
-    const newBooking = {
-      id: nextId,
-      date: normalizedDate,
-      time: selectedTime,
-      washType: washType,
-      carModel: carModel,
-      carOwner: carOwner,
-      plate: plate,
-      phone: phone,
-      price: calculatePrice(),
-      status: 'agendado',
-    }
-
-    const updatedBookings = [...existingBookings, newBooking]
-
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings))
-
-    alert('Agendamento realizado com sucesso!')
-
-    setSelectedDate('')
-    setSelectedTime('')
-    setWashType('')
-    setCarModel('')
-    setCarOwner('')
-    setPlate('')
-    setPhone('')
-    setShowSummary(false)
-
-    window.location.href = '/scheduling'
   }
 
   const formatDateForDisplay = (dateString: string) => {
@@ -145,35 +394,26 @@ export function Schedule() {
     return `${year}-${month}-${day}`
   }
 
-  const formatPhone = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11)
-    if (digits.length <= 2) return `(${digits}`
-    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-    if (digits.length <= 10)
-      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(
-      7,
-      11
-    )}`
-  }
-
   const isFormComplete =
     !!selectedDate &&
     !!selectedTime &&
     !!washType &&
     !!carModel &&
-    !!carOwner &&
-    !!plate &&
-    !!phone
+    !!carOwner.trim() &&
+    !!plate.trim() &&
+    phone.replace(/\D/g, '').length >= 10
 
   if (showSummary) {
+    const modeloSelecionado = modelosVeiculo.find(
+      (modelo) => modelo.id === parseInt(carModel)
+    )
+    const nomeModelo = modeloSelecionado?.nome || carModel
+
     return (
-      <div className='min-h-screen bg-background'>
-        <header className='border-b border-gray-300'>
+      <div className='min-h-screen bg-background animate-in fade-in duration-500'>
+        <header className='border-b border-gray-300 animate-in slide-in-from-top duration-300'>
           <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-            <div className='font-heading font-bold text-2xl text-primary'>
-              Lustro
-            </div>
+            <div className='font-heading font-bold text-2xl'>Lustro</div>
             <div className='flex items-center gap-4'>
               <Link to='/scheduling'>
                 <Button variant='secondary' size='sm'>
@@ -181,18 +421,16 @@ export function Schedule() {
                   Agendamentos
                 </Button>
               </Link>
-              <Link to='/'>
-                <Button variant='secondary' size='sm'>
-                  <LogOut className='w-4 h-4 mr-2' />
-                  Sair
-                </Button>
-              </Link>
+              <Button variant='secondary' size='sm' onClick={logout}>
+                <LogOut className='w-4 h-4 mr-2' />
+                Sair
+              </Button>
             </div>
           </div>
         </header>
 
-        <div className='container mx-auto max-w-2xl px-4 py-12'>
-          <Card>
+        <div className='container mx-auto max-w-2xl px-4 py-12 animate-in fade-in slide-in-from-bottom duration-500 delay-100'>
+          <Card className='animate-in fade-in zoom-in duration-500 delay-200'>
             <CardHeader className='text-center'>
               <CardTitle className='font-heading text-xl mb-7'>
                 Resumo do Agendamento
@@ -216,7 +454,7 @@ export function Schedule() {
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Modelo do Carro</Label>
-                  <p className='font-medium capitalize'>{carModel}</p>
+                  <p className='font-medium capitalize'>{nomeModelo}</p>
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Proprietário</Label>
@@ -224,7 +462,7 @@ export function Schedule() {
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Placa</Label>
-                  <p className='font-medium'>{plate}</p>
+                  <p className='font-medium'>{plate.toUpperCase()}</p>
                 </div>
                 <div>
                   <Label className='font-bold text-lg'>Telefone</Label>
@@ -246,14 +484,16 @@ export function Schedule() {
                   variant='secondary'
                   className='flex-1 bg-transparent'
                   onClick={() => setShowSummary(false)}
+                  disabled={isProcessing}
                 >
                   Voltar
                 </Button>
                 <Button
                   className='flex-1 bg-blue-700 hover:bg-accent/90'
                   onClick={handleFinalizeBooking}
+                  disabled={isProcessing}
                 >
-                  Confirmar
+                  {isProcessing ? 'Processando...' : 'Confirmar'}
                 </Button>
               </div>
             </CardContent>
@@ -264,12 +504,10 @@ export function Schedule() {
   }
 
   return (
-    <div className='min-h-screen bg-background'>
-      <header className='border-b border-gray-300'>
+    <div className='min-h-screen bg-background animate-in fade-in duration-500'>
+      <header className='border-b border-gray-300 animate-in slide-in-from-top duration-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-          <div className='font-heading font-bold text-2xl text-primary'>
-            Lustro
-          </div>
+          <div className='font-heading font-bold text-2xl'>Lustro</div>
           <div className='flex items-center gap-4'>
             <Link to='/scheduling'>
               <Button variant='secondary' size='sm'>
@@ -277,19 +515,17 @@ export function Schedule() {
                 Minha agenda
               </Button>
             </Link>
-            <Link to='/'>
-              <Button variant='secondary' size='sm'>
-                <LogOut className='w-4 h-4 mr-2' />
-                Sair
-              </Button>
-            </Link>
+            <Button variant='secondary' size='sm' onClick={logout}>
+              <LogOut className='w-4 h-4 mr-2' />
+              Sair
+            </Button>
           </div>
         </div>
       </header>
 
-      <div className='container mx-auto max-w-4xl px-4 py-12'>
-        <div className='text-center mb-12'>
-          <h1 className='font-heading font-bold text-3xl md:text-4xl text-primary mb-4'>
+      <div className='container mx-auto max-w-4xl px-4 py-12 animate-in fade-in slide-in-from-bottom duration-500 delay-100'>
+        <div className='text-center mb-12 animate-in fade-in slide-in-from-bottom duration-500 delay-150'>
+          <h1 className='font-heading font-bold text-3xl md:text-4xl mb-4'>
             Agendar Lavagem
           </h1>
           <p className='text-lg'>
@@ -297,9 +533,9 @@ export function Schedule() {
           </p>
         </div>
 
-        <div className='grid lg:grid-cols-2 gap-8'>
+        <div className='grid lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom duration-500 delay-200'>
           <div className='space-y-6'>
-            <Card>
+            <Card className='animate-in fade-in slide-in-from-left duration-500 delay-300'>
               <CardHeader>
                 <CardTitle className='flex items-center gap-2'>
                   <Calendar className='w-5 h-5 text-blue-700' />
@@ -317,9 +553,19 @@ export function Schedule() {
                     value={selectedDate}
                     onChange={(e) => {
                       const inputValue = e.target.value
-                      console.log('Data selecionada:', inputValue)
+                      const selectedDateObj = new Date(inputValue + 'T00:00:00')
+                      const isSunday = selectedDateObj.getDay() === 0
+
+                      if (isSunday) {
+                        alert(
+                          'Não funcionamos aos domingos. Por favor, escolha outro dia.'
+                        )
+                        return
+                      }
+
                       setSelectedDate(inputValue)
                       setSelectedTime('')
+                      fetchAgendamentosDoDia(inputValue)
                     }}
                     min={getTodayString()}
                     className='w-full'
@@ -327,7 +573,7 @@ export function Schedule() {
                 </div>
 
                 {selectedDate && (
-                  <div>
+                  <div className='animate-in fade-in slide-in-from-bottom duration-300'>
                     <div className='mb-2 p-2 bg-blue-50 rounded text-sm'>
                       <strong>Data selecionada:</strong>{' '}
                       {formatDateForDisplay(selectedDate)}
@@ -335,8 +581,11 @@ export function Schedule() {
                     <Label>Horários Disponíveis</Label>
                     <div className='grid grid-cols-4 gap-2 mt-2'>
                       {timeSlots.map((time) => {
-                        const isUnavailable =
+                        const isOccupied =
                           getUnavailableTimes(selectedDate).includes(time)
+                        const isUnavailable =
+                          isOccupied || !isTimeAvailable(selectedDate, time)
+
                         return (
                           <Button
                             key={time}
@@ -346,14 +595,19 @@ export function Schedule() {
                             size='sm'
                             disabled={isUnavailable}
                             onClick={() => setSelectedTime(time)}
-                            className={`
+                            className={`transition-all duration-200 hover:scale-105
                               ${
                                 selectedTime === time
-                                  ? 'bg-blue-700 hover:bg-accent/90'
+                                  ? 'bg-blue-700 hover:bg-accent/90 text-white'
                                   : ''
                               }
                               ${
-                                isUnavailable
+                                isOccupied
+                                  ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+                                  : ''
+                              }
+                              ${
+                                isUnavailable && !isOccupied
                                   ? 'opacity-50 cursor-not-allowed'
                                   : ''
                               }
@@ -364,17 +618,29 @@ export function Schedule() {
                         )
                       })}
                     </div>
-                    {getUnavailableTimes(selectedDate).length > 0 && (
-                      <p className='text-xs mt-2'>
-                        Horários em cinza não estão disponíveis
-                      </p>
-                    )}
+                    <div className='text-xs mt-2 space-y-1'>
+                      {getUnavailableTimes(selectedDate).length > 0 && (
+                        <p className='text-gray-600'>
+                          * Horários em{' '}
+                          <span className='text-red-600 font-semibold'>
+                            vermelho
+                          </span>{' '}
+                          estão ocupados
+                        </p>
+                      )}
+                      {selectedDate === getTodayString() && (
+                        <p className='text-blue-600 font-medium'>
+                          ℹ️ Para agendamentos no mesmo dia, é necessário pelo
+                          menos 1 hora de antecedência
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className='animate-in fade-in slide-in-from-left duration-500 delay-400'>
               <CardHeader>
                 <CardTitle>Tipo de Lavagem</CardTitle>
               </CardHeader>
@@ -392,7 +658,6 @@ export function Schedule() {
                       htmlFor='interna'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      {/* <Sparkles className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Interna</p>
@@ -400,7 +665,9 @@ export function Schedule() {
                             R$ 50
                           </span>
                         </div>
-                        <p className=''>Interior limpo e higienizado</p>
+                        <p className='text-sm text-gray-600'>
+                          Interior limpo e higienizado
+                        </p>
                       </div>
                     </Label>
                   </div>
@@ -417,7 +684,6 @@ export function Schedule() {
                       htmlFor='externa'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      {/* <Car className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Externa</p>
@@ -425,7 +691,9 @@ export function Schedule() {
                             R$ 40
                           </span>
                         </div>
-                        <p className=''>Remova a sujeira e recupere o brilho</p>
+                        <p className='text-sm text-gray-600'>
+                          Remova a sujeira e recupere o brilho
+                        </p>
                       </div>
                     </Label>
                   </div>
@@ -442,7 +710,6 @@ export function Schedule() {
                       htmlFor='completa'
                       className='flex items-center gap-2 cursor-pointer flex-1'
                     >
-                      {/* <Shield className='w-4 h-4 text-blue-700' /> */}
                       <div className='flex-1'>
                         <div className='flex justify-between items-center'>
                           <p className='font-medium'>Lavagem Completa</p>
@@ -450,7 +717,9 @@ export function Schedule() {
                             R$ 80
                           </span>
                         </div>
-                        <p className=''>Cuidado total por dentro e por fora</p>
+                        <p className='text-sm text-gray-600'>
+                          Cuidado total por dentro e por fora
+                        </p>
                       </div>
                     </Label>
                   </div>
@@ -460,7 +729,7 @@ export function Schedule() {
           </div>
 
           <div className='space-y-6'>
-            <Card>
+            <Card className='animate-in fade-in slide-in-from-right duration-500 delay-300'>
               <CardHeader>
                 <CardTitle>Dados do Veículo</CardTitle>
               </CardHeader>
@@ -484,7 +753,8 @@ export function Schedule() {
                     id='plate'
                     placeholder='ABC-1234'
                     value={plate}
-                    onChange={(e) => setPlate(e.target.value)}
+                    onChange={(e) => setPlate(formatPlate(e.target.value))}
+                    maxLength={8}
                   />
                 </div>
                 <div>
@@ -496,12 +766,13 @@ export function Schedule() {
                     placeholder='(11) 99999-9999'
                     value={phone}
                     onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    maxLength={15}
                   />
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className='animate-in fade-in slide-in-from-right duration-500 delay-400'>
               <CardHeader>
                 <CardTitle>Modelo do Carro</CardTitle>
               </CardHeader>
@@ -510,33 +781,58 @@ export function Schedule() {
                   <Label htmlFor='carModel' className='mb-2'>
                     Selecione o modelo do seu carro
                   </Label>
-                  <Select
-                    value={carModel}
-                    onChange={setCarModel}
-                    placeholder='Escolha o modelo'
-                  >
-                    <SelectItem value='sedan'>Sedan</SelectItem>
-                    <SelectItem value='hatch'>Hatch</SelectItem>
-                    <SelectItem value='suv'>SUV</SelectItem>
-                    <SelectItem value='pickup'>Pickup</SelectItem>
-                    <SelectItem value='van'>Van</SelectItem>
-                    <SelectItem value='coupe'>Coupé</SelectItem>
-                    <SelectItem value='conversivel'>Conversível</SelectItem>
-                    <SelectItem value='wagon'>Station Wagon</SelectItem>
-                  </Select>
+
+                  {loadingModelos ? (
+                    <div className='flex items-center justify-center py-4'>
+                      <Loader className='w-5 h-5 animate-spin mr-2' />
+                      <span>Carregando modelos da API...</span>
+                    </div>
+                  ) : errorModelos ? (
+                    <div className='bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm'>
+                      <p className='font-semibold mb-1'>
+                        Erro ao carregar modelos
+                      </p>
+                      <p>{errorModelos}</p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className='mt-2 text-xs underline hover:no-underline'
+                      >
+                        Tentar novamente
+                      </button>
+                    </div>
+                  ) : modelosVeiculo.length === 0 ? (
+                    <div className='bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-md text-sm'>
+                      Nenhum modelo disponível no momento.
+                    </div>
+                  ) : (
+                    <Select
+                      value={carModel}
+                      onChange={setCarModel}
+                      placeholder='Escolha o modelo'
+                    >
+                      {modelosVeiculo.map((modelo) => (
+                        <SelectItem
+                          key={modelo.id}
+                          value={modelo.id.toString()}
+                        >
+                          {modelo.nome}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        <div className='flex justify-center mt-8'>
+        <div className='flex justify-center mt-8 animate-in fade-in slide-in-from-bottom duration-500 delay-500'>
           <Button
-            className='bg-blue-700 hover:bg-accent/90 text-lg py-6 px-12'
+            className='bg-blue-700 hover:bg-accent/90 text-lg py-6 px-12 transition-all duration-300 hover:scale-105'
             onClick={handleConfirmBooking}
-            disabled={!isFormComplete}
+            disabled={!isFormComplete || loadingModelos}
           >
-            Revisar Agendamento
+            {loadingModelos ? 'Carregando...' : 'Revisar Agendamento'}
           </Button>
         </div>
       </div>

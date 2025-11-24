@@ -76,7 +76,6 @@ export function AdminTimetable() {
   }
 
   const salvarHorarios = () => {
-    console.log('Salvando horários:', horariosFuncionamento)
     alert('Horários salvos com sucesso!')
   }
 
@@ -84,7 +83,7 @@ export function AdminTimetable() {
     <div className='min-h-screen bg-background'>
       <header className='border-b border-gray-300'>
         <div className='container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between'>
-          <div className='font-heading font-bold text-2xl text-primary'>
+          <div className='font-heading font-bold text-2xl'>
             Lustro Admin
           </div>
 
@@ -102,7 +101,7 @@ export function AdminTimetable() {
       <div className='container mx-auto max-w-6xl px-4 py-8'>
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4 sm:gap-0'>
           <div className='text-center sm:text-left'>
-            <h1 className='font-heading font-bold text-2xl text-primary mb-2'>
+            <h1 className='font-heading font-bold text-2xl mb-2'>
               Horários de Funcionamento
             </h1>
             <p>Configure os dias e horários em que o lava-jato funciona</p>
@@ -116,7 +115,7 @@ export function AdminTimetable() {
 
         <Card>
           <CardHeader>
-            <CardTitle className='font-heading text-xl text-primary flex items-center gap-2'>
+            <CardTitle className='font-heading text-xl flex items-center gap-2'>
               <Calendar className='w-5 h-5' />
               Configuração Semanal
             </CardTitle>
@@ -139,7 +138,7 @@ export function AdminTimetable() {
                         onChange={() => toggleDia(dia.key)}
                       />
                       <div>
-                        <p className='font-medium text-primary'>{dia.nome}</p>
+                        <p className='font-medium'>{dia.nome}</p>
                         {horario.ativo ? (
                           <Badge
                             variant='secondary'
@@ -201,7 +200,7 @@ export function AdminTimetable() {
                           checked={horario.ativo}
                           onChange={() => toggleDia(dia.key)}
                         />
-                        <p className='font-medium text-primary text-base'>
+                        <p className='font-medium text-base'>
                           {dia.nome}
                         </p>
                       </div>
@@ -273,7 +272,7 @@ export function AdminTimetable() {
 
         <Card className='mt-8'>
           <CardHeader>
-            <CardTitle className='font-heading text-xl text-primary'>
+            <CardTitle className='font-heading text-xl'>
               Resumo dos Horários
             </CardTitle>
           </CardHeader>
@@ -289,7 +288,7 @@ export function AdminTimetable() {
                     key={dia.key}
                     className='flex items-center justify-between p-3 rounded-lg'
                   >
-                    <span className='font-medium text-primary'>{dia.nome}</span>
+                    <span className='font-medium'>{dia.nome}</span>
                     {horario.ativo ? (
                       <span className='text-sm '>
                         {horario.inicio} - {horario.fim}
@@ -307,3 +306,4 @@ export function AdminTimetable() {
     </div>
   )
 }
+

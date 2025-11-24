@@ -1,59 +1,44 @@
-// export interface User {
-//   id: string
-//   nome: string
-//   email: string
-// }
+import { API_BASE_URL } from '../config/api'
 
-// export const setAuthToken = (token: string): void => {
-//   localStorage.setItem('authToken', token)
-// }
+export const logout = async (): Promise<void> => {
+  const token = localStorage.getItem('authToken')
+  const userData = localStorage.getItem('user')
 
-// export const getAuthToken = (): string | null => {
-//   return localStorage.getItem('authToken')
-// }
+  // Verifica se é admin
+  let isAdmin = false
+  if (userData) {
+    try {
+      const user = JSON.parse(userData)
+      isAdmin = user && user.email === 'admin@lustro.com'
+    } catch {
+      // Ignorar erro de parse
+    }
+  }
 
-// export const removeAuthToken = (): void => {
-//   localStorage.removeItem('authToken')
-//   localStorage.removeItem('user')
-// }
+  // Chama o endpoint de logout correto
+  if (token) {
+    try {
+      const endpoint = isAdmin
+        ? `${API_BASE_URL}/auth/admin/logout`
+        : `${API_BASE_URL}/auth/logout`
 
-// export const setUser = (user: User): void => {
-//   localStorage.setItem('user', JSON.stringify(user))
-// }
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+    } catch (error) {
+      // Continua com o logout mesmo se a requisição falhar
+      console.error('Erro ao fazer logout no servidor:', error)
+    }
+  }
 
-// export const getUser = (): User | null => {
-//   const userStr = localStorage.getItem('user')
-//   if (!userStr) return null
+  // Remove os dados do localStorage
+  localStorage.removeItem('authToken')
+  localStorage.removeItem('user')
 
-//   try {
-//     return JSON.parse(userStr)
-//   } catch {
-//     return null
-//   }
-// }
-
-// export const isAuthenticated = (): boolean => {
-//   return !!getAuthToken()
-// }
-
-// export const logout = (): void => {
-//   removeAuthToken()
-// }
-
-// export const fetchWithAuth = async (
-//   url: string,
-//   options: RequestInit = {}
-// ): Promise<Response> => {
-//   const token = getAuthToken()
-
-//   const headers = {
-//     'Content-Type': 'application/json',
-//     ...(token && { Authorization: `Bearer ${token}` }),
-//     ...options.headers,
-//   }
-
-//   return fetch(url, {
-//     ...options,
-//     headers,
-//   })
-// }
+  // Redireciona para a página inicial
+  window.location.href = '/'
+}

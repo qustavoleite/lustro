@@ -9,21 +9,21 @@ export function LandingPage() {
     <div className='min-h-screen '>
       <header className='border-b border-[rgba(0,0,0,0.14)] backdrop-blur-md sticky top-0 z-50'>
         <div className='container mx-auto max-w-6xl px-3 py-4 flex items-center justify-between'>
-          <div className='font-heading font-bold text-2xl text-primary'>
+          <div className='font-heading font-bold text-2xl'>
             Lustro
           </div>
 
           <nav className='hidden md:flex items-center space-x-8'>
-            <a href='#home' className='tex  hover:text-blue-700'>
+            <a href='#home' className='text-gray-700 hover:text-blue-700'>
               Home
             </a>
-            <a href='#sobre' className='tex  hover:text-blue-700'>
+            <a href='#sobre' className='text-gray-700 hover:text-blue-700'>
               Sobre
             </a>
-            <a href='#servicos' className='tex  hover:text-blue-700'>
+            <a href='#servicos' className='text-gray-700 hover:text-blue-700'>
               Serviços
             </a>
-            <a href='#contato' className='tex  hover:text-blue-700'>
+            <a href='#contato' className='text-gray-700 hover:text-blue-700'>
               Contato
             </a>
           </nav>
@@ -43,7 +43,7 @@ export function LandingPage() {
         <div className='container mx-auto max-w-6xl'>
           <div className='grid md:grid-cols-2 gap-12 items-center'>
             <div>
-              <h1 className='font-heading font-bold text-4xl md:text-5xl text-primary mb-6'>
+              <h1 className='font-heading font-bold text-4xl md:text-5xl mb-6'>
                 Seu carro brilhando sem complicação
               </h1>
               <p className='text-lg md:text-xl  mb-8 leading-relaxed'>
@@ -92,7 +92,7 @@ export function LandingPage() {
               />
             </div>
             <div>
-              <h2 className='font-heading font-bold text-3xl md:text-4xl text-primary mb-6'>
+              <h2 className='font-heading font-bold text-3xl md:text-4xl  mb-6'>
                 Sobre a Lustro
               </h2>
               <p className='text-lg  leading-relaxed mb-6'>
@@ -113,7 +113,7 @@ export function LandingPage() {
       <section id='servicos' className='py-20 px-4'>
         <div className='container mx-auto max-w-6xl'>
           <div className='text-left md:text-center mb-16'>
-            <h2 className='font-heading font-bold text-3xl md:text-4xl text-primary mb-4'>
+            <h2 className='font-heading font-bold text-3xl md:text-4xl  mb-4'>
               Nossos Serviços
             </h2>
             <p className='text-lg max-w-2xl md:mx-auto'>
@@ -130,7 +130,7 @@ export function LandingPage() {
                 <div className='w-16 h-16 bg-[#E7EBF4] rounded-full flex items-center justify-center mx-auto mb-6'>
                   <Car className='w-8 h-8 text-blue-700' />
                 </div>
-                <h3 className='font-heading font-semibold text-xl text-primary mb-4'>
+                <h3 className='font-heading font-semibold text-xl  mb-4'>
                   Lavagem Externa
                 </h3>
                 <p>Remova a sujeira e recupere o brilho da sua pintura.</p>
@@ -142,7 +142,7 @@ export function LandingPage() {
                 <div className='w-16 h-16 bg-[#E7EBF4] rounded-full flex items-center justify-center mx-auto mb-6'>
                   <Sparkles className='w-8 h-8 text-blue-700' />
                 </div>
-                <h3 className='font-heading font-semibold text-xl text-primary mb-4'>
+                <h3 className='font-heading font-semibold text-xl  mb-4'>
                   Lavagem Interna
                 </h3>
                 <p>Seu carro brilhando sem complicação.</p>
@@ -154,7 +154,7 @@ export function LandingPage() {
                 <div className='w-16 h-16 bg-[#E7EBF4] rounded-full flex items-center justify-center mx-auto mb-6'>
                   <Shield className='w-8 h-8 text-blue-700' />
                 </div>
-                <h3 className='font-heading font-semibold text-xl text-primary mb-4'>
+                <h3 className='font-heading font-semibold text-xl  mb-4'>
                   Lavagem Completa
                 </h3>
                 <p>
@@ -170,7 +170,7 @@ export function LandingPage() {
         <div className='container mx-auto max-w-6xl '>
           <div className='grid md:grid-cols-4 gap-8 mb-8 text-left'>
             <div>
-              <div className='font-heading font-bold text-2xl text-primary mb-4'>
+              <div className='font-heading font-bold text-2xl  mb-4'>
                 Lustro
               </div>
               <p>
@@ -181,7 +181,7 @@ export function LandingPage() {
             </div>
 
             <div>
-              <h3 className='font-heading font-semibold text-lg text-primary mb-4'>
+              <h3 className='font-heading font-semibold text-lg  mb-4'>
                 Endereço
               </h3>
               <div className='space-y-1'>
@@ -193,7 +193,7 @@ export function LandingPage() {
             </div>
 
             <div>
-              <h3 className='font-heading font-semibold text-lg text-primary mb-4'>
+              <h3 className='font-heading font-semibold text-lg  mb-4'>
                 Menu
               </h3>
               <nav className='space-y-2'>
@@ -213,7 +213,7 @@ export function LandingPage() {
             </div>
 
             <div>
-              <h3 className='font-heading font-semibold text-lg text-primary mb-4 '>
+              <h3 className='font-heading font-semibold text-lg  mb-4 '>
                 Redes Sociais
               </h3>
               <div className='flex gap-4 justify-start md:justify-start'>

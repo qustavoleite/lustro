@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Eye, EyeOff } from 'lucide-react'
+import { API_BASE_URL } from '../config/api'
 
 export function Login() {
   const navigate = useNavigate()
@@ -23,66 +24,75 @@ export function Login() {
         senha: password,
       }
 
-      console.log('Tentando login com:', { email: payload.email })
+      const isAdmin = payload.email === 'admin@lustro.com'
+      const adminEndpoint = `${API_BASE_URL}/auth/admin/login`
+      const userEndpoint = `${API_BASE_URL}/auth/login`
+      const endpoint = isAdmin ? adminEndpoint : userEndpoint
 
-      if (
-        payload.email === 'admin@gmail.com' &&
-        payload.senha === 'Admin@007'
-      ) {
-        console.log('Credenciais de administrador detectadas')
-
-        const adminUser = {
-          id: 'admin',
-          email: 'admin@gmail.com',
-          nome: 'Administrador',
-          role: 'admin',
-        }
-        localStorage.setItem('authToken', 'admin-token-' + Date.now())
-        localStorage.setItem('user', JSON.stringify(adminUser))
-
-        console.log('Login de administrador realizado com sucesso!')
-        navigate('/admin')
-        return 
-      }
-
-      const response = await fetch(
-        'https://lustro-black.vercel.app/api/auth/login',
-        {
+      let response
+      try {
+        response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
+        })
+      } catch (fetchError) {
+        if (fetchError instanceof TypeError) {
+          if (fetchError.message.includes('Failed to fetch')) {
+            throw new Error(
+              'Erro de conexão com o servidor. O backend pode estar bloqueando requisições do frontend (CORS). Verifique se o backend está configurado corretamente.'
+            )
+          }
+          throw new Error(
+            'Erro de conexão. Verifique sua internet e tente novamente.'
+          )
         }
-      )
+        throw fetchError
+      }
 
-      console.log('Status da resposta:', response.status)
+      const contentType = response.headers.get('content-type')
+      const isJson = contentType && contentType.includes('application/json')
 
-      const data = await response.json()
-      console.log('Resposta da API:', data)
+      let data
+      if (isJson) {
+        data = await response.json()
+      } else {
+        const text = await response.text()
+        if (!response.ok) {
+          throw new Error(
+            text || `Erro ${response.status}: ${response.statusText}`
+          )
+        }
+        throw new Error('Resposta do servidor não é JSON válido')
+      }
 
       if (!response.ok) {
         const errorMessage =
-          data.error || data.message || data.msg || 'Credenciais inválidas'
+          data?.error ||
+          data?.message ||
+          data?.msg ||
+          `Erro ${response.status}: Credenciais inválidas`
         throw new Error(errorMessage)
       }
 
-      // Salva o token e dados do usuário normal
-      if (data.token) {
-        localStorage.setItem('authToken', data.token)
-        console.log('Token salvo com sucesso')
+      if (!data.access_token) {
+        throw new Error('Token de acesso não recebido do servidor')
       }
+
+      localStorage.setItem('authToken', data.access_token)
 
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user))
-        console.log('Dados do usuário salvos:', data.user)
       }
 
-      // Redireciona usuários normais para /schedule
-      console.log('Login de usuário normal realizado com sucesso!')
-      navigate('/schedule')
+      if (isAdmin) {
+        navigate('/admin')
+      } else {
+        navigate('/schedule')
+      }
     } catch (err) {
-      console.error('Erro no login:', err)
       setError(
         err instanceof Error
           ? err.message
@@ -93,7 +103,6 @@ export function Login() {
     }
   }
 
-  // Resto do componente permanece igual...
   return (
     <div className='min-h-screen flex'>
       <div className='hidden lg:flex lg:w-1/2 bg-gray-100 flex-col justify-center px-12'>

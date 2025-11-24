@@ -1,33 +1,33 @@
-import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { Loading } from "../components/Loading"
-import { useAuth } from "../hooks/useAuth"
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Loading } from '../components/Loading'
+import { useAuth } from '../hooks/useAuth'
 
-export function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin, isAuthenticated } = useAuth()
+export function ProtectedAdminRoute({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const { isAdmin, isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
-  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (!isLoading) {
       if (!isAuthenticated) {
         navigate('/login')
       } else if (!isAdmin) {
         navigate('/schedule')
       }
-      setIsChecking(false)
-    }, 100)
+    }
+  }, [isAdmin, isAuthenticated, isLoading, navigate])
 
-    return () => clearTimeout(timer)
-  }, [isAdmin, isAuthenticated, navigate])
-
-  if (isChecking) {
+  if (isLoading) {
     return <Loading />
   }
 
-  if (isAuthenticated && isAdmin) {
-    return <>{children}</>
+  if (!isAuthenticated || !isAdmin) {
+    return <Loading />
   }
 
-  return null
+  return <>{children}</>
 }
