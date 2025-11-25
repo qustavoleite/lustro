@@ -480,18 +480,6 @@ export function Admin() {
                 </span>
               </div>
               <div>
-                <span className='font-medium block text-sm'>Marca:</span>
-                <span className='text-foreground capitalize'>
-                  {selectedAgendamento.marca}
-                </span>
-              </div>
-              <div>
-                <span className='font-medium block text-sm'>Cor:</span>
-                <span className='text-foreground capitalize'>
-                  {selectedAgendamento.cor}
-                </span>
-              </div>
-              <div>
                 <span className='font-medium block text-sm'>Status:</span>
                 <span className='text-foreground capitalize'>
                   {selectedAgendamento.status || 'agendado'}
